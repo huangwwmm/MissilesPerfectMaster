@@ -164,7 +164,7 @@ public class MissileManager : MonoBehaviour {
 #if ENABLE_GPUREADBACK
 # if GPUREADBACK_COULD_BE_QUEUED
     const int MAX_RQUESTS = 4;
-    UnityEngine.Experimental.Rendering.AsyncGPUReadbackRequest[] requests_;
+    UnityEngine.Rendering.AsyncGPUReadbackRequest[] requests_;
     int request_index_;
 # else
     UnityEngine.Experimental.Rendering.AsyncGPUReadbackRequest requests_;
@@ -323,9 +323,9 @@ public class MissileManager : MonoBehaviour {
 
 #if ENABLE_GPUREADBACK
 # if GPUREADBACK_COULD_BE_QUEUED
-        requests_ = new UnityEngine.Experimental.Rendering.AsyncGPUReadbackRequest[MAX_RQUESTS];
+        requests_ = new UnityEngine.Rendering.AsyncGPUReadbackRequest[MAX_RQUESTS];
         request_index_ = 0;
-        requests_[request_index_] = UnityEngine.Experimental.Rendering.AsyncGPUReadback.Request(cbuffer_missile_result_);
+        requests_[request_index_] = UnityEngine.Rendering.AsyncGPUReadback.Request(cbuffer_missile_result_);
         ++request_index_;
         request_index_ %= MAX_RQUESTS;
 # else
@@ -601,7 +601,7 @@ public class MissileManager : MonoBehaviour {
         }
         for (var k = 0; k < MAX_RQUESTS; ++k) {
             if (requests_[request_index_].done) {
-                requests_[request_index_] = UnityEngine.Experimental.Rendering.AsyncGPUReadback.Request(cbuffer_missile_result_);
+                requests_[request_index_] = UnityEngine.Rendering.AsyncGPUReadback.Request(cbuffer_missile_result_);
                 break;
             }
             ++request_index_;

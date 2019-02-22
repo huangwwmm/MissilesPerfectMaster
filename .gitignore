@@ -39,3 +39,6 @@ Tools/*.png
 movie_work
 *.mp4
 */.DS_Store
+/.vs
+/Packages
+/Logs
