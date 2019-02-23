@@ -3,20 +3,21 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using UnityEngine;
 
-// #pragma warning disable 0414
-
-public class ComputeBillboardRenderer : MonoBehaviour {
+public class ComputeBillboardRenderer : MonoBehaviour
+{
 
     public Material material_;
     private Mesh mesh_;
     const int BILLBOARD_MAX = 4096; // be careful about the minimum for the sorting algorithm.
     const int BILLBOARD_NUM = 1024;
 
-    struct SortElement {
+    struct SortElement
+    {
         public uint id;
         public float key;
     }
-    struct Billboard {
+    struct Billboard
+    {
         public Vector4 world_position;
         public Vector4 color;
     }
@@ -53,22 +54,24 @@ public class ComputeBillboardRenderer : MonoBehaviour {
 
         // create triangles
         // const int MAX = UNIT_MAX <= 65000/4 ? UNIT_MAX : 65000/4;
-        var vertices = new Vector3[BILLBOARD_NUM*4];
-        int[] triangles = new int[BILLBOARD_NUM*6];
-        for (var i = 0; i < BILLBOARD_NUM; ++i) {
-            triangles[i*6+0] = i*4+0;
-            triangles[i*6+1] = i*4+1;
-            triangles[i*6+2] = i*4+2;
-            triangles[i*6+3] = i*4+2;
-            triangles[i*6+4] = i*4+1;
-            triangles[i*6+5] = i*4+3;
+        var vertices = new Vector3[BILLBOARD_NUM * 4];
+        int[] triangles = new int[BILLBOARD_NUM * 6];
+        for (var i = 0; i < BILLBOARD_NUM; ++i)
+        {
+            triangles[i * 6 + 0] = i * 4 + 0;
+            triangles[i * 6 + 1] = i * 4 + 1;
+            triangles[i * 6 + 2] = i * 4 + 2;
+            triangles[i * 6 + 3] = i * 4 + 2;
+            triangles[i * 6 + 4] = i * 4 + 1;
+            triangles[i * 6 + 5] = i * 4 + 3;
         }
-        var uvs = new Vector2[BILLBOARD_NUM*4];
-        for (var i = 0; i < BILLBOARD_NUM; ++i) {
-            uvs[i*4+0] = new Vector2(0f, 0f);
-            uvs[i*4+1] = new Vector2(1f, 0f);
-            uvs[i*4+2] = new Vector2(0f, 1f);
-            uvs[i*4+3] = new Vector2(1f, 1f);
+        var uvs = new Vector2[BILLBOARD_NUM * 4];
+        for (var i = 0; i < BILLBOARD_NUM; ++i)
+        {
+            uvs[i * 4 + 0] = new Vector2(0f, 0f);
+            uvs[i * 4 + 1] = new Vector2(1f, 0f);
+            uvs[i * 4 + 2] = new Vector2(0f, 1f);
+            uvs[i * 4 + 3] = new Vector2(1f, 1f);
         }
         var mesh = new Mesh();
         mesh.name = "billbaord";
@@ -80,8 +83,9 @@ public class ComputeBillboardRenderer : MonoBehaviour {
 
         //
         billboards_ = new Billboard[BILLBOARD_MAX];
-        for (var i = 0; i < BILLBOARD_MAX; ++i) {
-            billboards_[i].world_position = Random.insideUnitSphere*4f;
+        for (var i = 0; i < BILLBOARD_MAX; ++i)
+        {
+            billboards_[i].world_position = Random.insideUnitSphere * 4f;
             billboards_[i].world_position.w = 1f;
             var col = Color.HSVToRGB(Random.Range(0f, 1f), 1f, 1f);
             billboards_[i].color = new Vector4(col.r, col.g, col.b, col.a);
@@ -100,7 +104,8 @@ public class ComputeBillboardRenderer : MonoBehaviour {
     {
         var camera = Camera.current;
         var view_matrix = camera.worldToCameraMatrix;
-        for (uint i = 0; i < BILLBOARD_MAX; ++i) {
+        for (uint i = 0; i < BILLBOARD_MAX; ++i)
+        {
             var vpos = view_matrix * billboards_[i].world_position;
             elements_[i].id = i;
             elements_[i].key = vpos.z;

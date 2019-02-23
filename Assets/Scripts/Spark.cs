@@ -1,10 +1,4 @@
-﻿/* -*- mode:CSharp; coding:utf-8-with-signature -*-
- */
-
-using UnityEngine;
-using System.Collections;
-
-namespace UTJ {
+﻿using UnityEngine;
 
 public class Spark
 {
@@ -50,30 +44,33 @@ public class Spark
         positions_ = new Vector3[SPARK_MAX];
         uv2_list_ = new Vector2[SPARK_MAX];
 
-        normals_ = new Vector3[POINT_MAX*2];
-        uv2s_ = new Vector2[POINT_MAX*2];
+        normals_ = new Vector3[POINT_MAX * 2];
+        uv2s_ = new Vector2[POINT_MAX * 2];
 
-        var vertices = new Vector3[POINT_MAX*2];
+        var vertices = new Vector3[POINT_MAX * 2];
         float range = 1f;
-        for (var i = 0; i < POINT_MAX; ++i) {
+        for (var i = 0; i < POINT_MAX; ++i)
+        {
             float x = Random.Range(-1f, 1f);
             float y = Random.Range(-1f, 1f);
             float z = Random.Range(-1f, 1f);
-            float len2 = x*x + y*y + z*z;
+            float len2 = x * x + y * y + z * z;
             float len = Mathf.Sqrt(len2);
-            float rlen = 1.0f/len;
-            var point = new Vector3(x*rlen*range, y*rlen*range, z*rlen*range);
-            vertices[i*2+0] = point;
-            vertices[i*2+1] = point;
+            float rlen = 1.0f / len;
+            var point = new Vector3(x * rlen * range, y * rlen * range, z * rlen * range);
+            vertices[i * 2 + 0] = point;
+            vertices[i * 2 + 1] = point;
         }
-        var indices = new int[POINT_MAX*2];
-        for (var i = 0; i < POINT_MAX*2; ++i) {
+        var indices = new int[POINT_MAX * 2];
+        for (var i = 0; i < POINT_MAX * 2; ++i)
+        {
             indices[i] = i;
         }
-        var uvs = new Vector2[POINT_MAX*2];
-        for (var i = 0; i < POINT_MAX; ++i) {
-            uvs[i*2+0] = new Vector2(1f, 0f);
-            uvs[i*2+1] = new Vector2(0f, 1f);
+        var uvs = new Vector2[POINT_MAX * 2];
+        for (var i = 0; i < POINT_MAX; ++i)
+        {
+            uvs[i * 2 + 0] = new Vector2(1f, 0f);
+            uvs[i * 2 + 1] = new Vector2(0f, 1f);
         }
 
         spawn_index_ = 0;
@@ -99,13 +96,14 @@ public class Spark
         material_property_block_.SetVectorArray("_Colors", col_list);
         just_after_reset_ = true;
     }
-    
+
     public void spawn(ref Vector3 pos, Type type, double update_time)
     {
         positions_[spawn_index_] = pos;
         uv2_list_[spawn_index_] = new Vector2((float)update_time, (float)type);
         ++spawn_index_;
-        if (spawn_index_ >= SPARK_MAX) {
+        if (spawn_index_ >= SPARK_MAX)
+        {
             spawn_index_ = 0;
         }
     }
@@ -116,15 +114,17 @@ public class Spark
 
     public void end()
     {
-        for (var s = 0; s < SPARK_MAX; ++s) {
-            for (var i = 0; i < PARTICLE_NUM; ++i) {
-                int idx = ((PARTICLE_NUM * s) + i) *2;
-                normals_[idx+0] = positions_[s];
-                normals_[idx+1] = positions_[s];
-                uv2s_[idx+0].x = uv2_list_[s].x;
-                uv2s_[idx+0].y = uv2_list_[s].y;
-                uv2s_[idx+1].x = uv2_list_[s].x;
-                uv2s_[idx+1].y = uv2_list_[s].y + 1f;
+        for (var s = 0; s < SPARK_MAX; ++s)
+        {
+            for (var i = 0; i < PARTICLE_NUM; ++i)
+            {
+                int idx = ((PARTICLE_NUM * s) + i) * 2;
+                normals_[idx + 0] = positions_[s];
+                normals_[idx + 1] = positions_[s];
+                uv2s_[idx + 0].x = uv2_list_[s].x;
+                uv2s_[idx + 0].y = uv2_list_[s].y;
+                uv2s_[idx + 1].x = uv2_list_[s].x;
+                uv2s_[idx + 1].y = uv2_list_[s].y + 1f;
             }
         }
     }
@@ -132,10 +132,12 @@ public class Spark
 
     public void render(Camera camera, double render_time)
     {
-        if (material_ == null) {
+        if (material_ == null)
+        {
             return;
         }
-        if (just_after_reset_) {
+        if (just_after_reset_)
+        {
             just_after_reset_ = false;
             prev_view_matrix_ = camera.worldToCameraMatrix;
             return;
@@ -145,14 +147,8 @@ public class Spark
         mesh_.uv2 = uv2s_;
         var matrix = prev_view_matrix_ * camera.cameraToWorldMatrix; // prev-view * inverted-cur-view
         material_.SetFloat(material_CurrentTime, (float)render_time);
-        material_.SetFloat(material_PreviousTime, (float)render_time - (1f/60f));
+        material_.SetFloat(material_PreviousTime, (float)render_time - (1f / 60f));
         material_.SetMatrix(material_PrevInvMatrix, matrix);
         prev_view_matrix_ = camera.worldToCameraMatrix;
     }
 }
-
-} // namespace UTJ {
-
-/*
- * End of Spark.cs
- */

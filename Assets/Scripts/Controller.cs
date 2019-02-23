@@ -1,10 +1,5 @@
-﻿/* -*- mode:CSharp; coding:utf-8-with-signature -*-
- */
-
-using UnityEngine;
+﻿using UnityEngine;
 using System.Collections;
-
-namespace UTJ {
 
 public class Controller
 {
@@ -238,9 +233,3 @@ public class Controller
         return latest_;
     }
 }
-
-} // namespace UTJ {
-
-/*
- * End of Controller.cs
- */

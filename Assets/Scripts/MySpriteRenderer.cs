@@ -1,10 +1,4 @@
-﻿/* -*- mode:CSharp; coding:utf-8-with-signature -*-
- */
-
-using UnityEngine;
-using System.Collections;
-
-namespace UTJ {
+﻿using UnityEngine;
 
 [RequireComponent(typeof(MeshFilter),typeof(MeshRenderer))]
 public class MySpriteRenderer : MonoBehaviour {
@@ -29,9 +23,3 @@ public class MySpriteRenderer : MonoBehaviour {
         mr_.SetPropertyBlock(MySprite.Instance.getMaterialPropertyBlock());
     }
 }
-
-} // namespace UTJ {
-
-/*
- * End of MySpriteRenderer.cs
- */

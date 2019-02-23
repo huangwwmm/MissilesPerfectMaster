@@ -1,8 +1,4 @@
-﻿/* -*- mode:CSharp; coding:utf-8-with-signature -*-
- */
-using UnityEngine;
-
-namespace UTJ {
+﻿using UnityEngine;
 
 public class PerformanceMeter
 {
@@ -11,7 +7,7 @@ public class PerformanceMeter
     public static PerformanceMeter Instance { get { return instance_ ?? (instance_ = new PerformanceMeter()); } }
 
     private System.Diagnostics.Stopwatch stopwatch_;
-    private const float FRAME_PERIOD = 1f/59.94f;
+    private const float FRAME_PERIOD = 1f / 59.94f;
     private float fps_;
     private float display_fps_;
 
@@ -97,17 +93,19 @@ public class PerformanceMeter
         render_tick_ = stopwatch_.ElapsedTicks - render_start_tick_;
     }
 
-    public bool wasSlowLoop() {
+    public bool wasSlowLoop()
+    {
         return !recording_ && fps_ < 50f;
     }
 
     public float getDisplayFPS() { return display_fps_; }
     public float getFPS() { return fps_; }
 
-    
+
     public void drawMeters(int front)
     {
-        if (recording_) {
+        if (recording_)
+        {
             return;
         }
 #pragma warning disable 162
@@ -123,9 +121,9 @@ public class PerformanceMeter
         int h = height;
 
         MySprite.Instance.put(x, y, width, height, MySprite.Kind.Square, MySprite.Type.Black);
-        w = (int)((float)render_tick_/frame_tick * (float)width);
+        w = (int)((float)render_tick_ / frame_tick * (float)width);
         MySprite.Instance.put(x, y, w, h, MySprite.Kind.Square, MySprite.Type.Red);
-        w = (int)((float)behaviour_update_tick_/frame_tick * (float)width);
+        w = (int)((float)behaviour_update_tick_ / frame_tick * (float)width);
         MySprite.Instance.put(x, y, w, h, MySprite.Kind.Square, MySprite.Type.Yellow);
         x = bar_x;
         y -= 8;
@@ -136,24 +134,18 @@ public class PerformanceMeter
                                   x, y, MyFont.Type.White);
         int game_fps = SystemManager.Instance.getFPS();
         MyFont.Instance.putNumber(game_fps, 3 /* keta */, 0.5f /* scale */,
-                                  x+40, y, MyFont.Type.Blue);
+                                  x + 40, y, MyFont.Type.Blue);
         int missile_draw_max = MissileManager.Instance.missileDrawMax;
         MyFont.Instance.putNumber(missile_draw_max, 4 /* keta */, 0.5f /* scale */,
-                                  x+80, y, MyFont.Type.Blue);
+                                  x + 80, y, MyFont.Type.Blue);
         int gc_count = System.GC.CollectionCount(0 /* generation */) - gc_start_count_;
         MyFont.Instance.putNumber(gc_count, 8 /* keta */, 0.5f /* scale */,
-                                  x+150, y, MyFont.Type.Yellow);
+                                  x + 150, y, MyFont.Type.Yellow);
         MyFont.Instance.putNumber(frame_count_, 8 /* keta */, 0.5f /* scale */,
-                                  x+250, y, MyFont.Type.Green);
+                                  x + 250, y, MyFont.Type.Green);
         MyFont.Instance.putNumber(frame_diff_, 4 /* keta */, 0.5f /* scale */,
-                                  x+310, y, MyFont.Type.Green);
+                                  x + 310, y, MyFont.Type.Green);
         MyFont.Instance.putNumber(MissileManager.Instance.exist_missile_count_, 8 /* keta */, 0.5f /* scale */,
-                                  x+360, y, MyFont.Type.Red);
+                                  x + 360, y, MyFont.Type.Red);
     }
 }
-
-} // namespace UTJ {
-
-/*
- * End of PerformanceMeter.cs
- */

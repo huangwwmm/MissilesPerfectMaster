@@ -1,12 +1,7 @@
-﻿/* -*- mode:CSharp; coding:utf-8-with-signature -*-
- */
+﻿using UnityEngine;
 
-using UnityEngine;
-using System.Collections;
-
-namespace UTJ {
-
-public class PerformanceFetcher : MonoBehaviour {
+public class PerformanceFetcher : MonoBehaviour
+{
 
     void OnPreRender()
     {
@@ -25,9 +20,3 @@ public class PerformanceFetcher : MonoBehaviour {
         // MissileManager.Instance.SyncComputeBuffer();
     }
 }
-
-} // namespace UTJ {
-
-/*
- * End of PerformanceFetcher.cs
- */

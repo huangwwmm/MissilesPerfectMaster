@@ -1,13 +1,4 @@
-﻿/* -*- mode:CSharp; coding:utf-8-with-signature -*-
- */
-
-// e.g. ffmpeg -r 60 -i "./movie_work/20180502_%04d.png" -vcodec mpeg4 -b:v 18000k out.mov
-//      ffmpeg -r 60 -i "./movie_work/20180502_%04d.png" -pix_fmt yuv420p out.mp4
-
-using UnityEngine;
-using System.Collections;
-
-namespace UTJ {
+﻿using UnityEngine;
 
 public class Recorder : MonoBehaviour
 {
@@ -24,11 +15,11 @@ public class Recorder : MonoBehaviour
 
     private int frameno = -1;
 
-    void Reset ()
+    void Reset()
     {
-        screenCaptureKeys = new KeyCode[]{ KeyCode.R };
+        screenCaptureKeys = new KeyCode[] { KeyCode.R };
         keyModifiers = new KeyCode[] { KeyCode.LeftShift, KeyCode.RightShift };
-    
+
         baseFilename = System.DateTime.Now.ToString("yyyyMMdd");
     }
 
@@ -38,7 +29,7 @@ public class Recorder : MonoBehaviour
         Time.captureFramerate = framerate;
     }
 
-    void Update ()
+    void Update()
     {
         PerformanceMeter.Instance.setRecording();
         checkRecodingKey();
@@ -78,7 +69,7 @@ public class Recorder : MonoBehaviour
         return ret;
     }
 
-    public void TakeScreenShot ()
+    public void TakeScreenShot()
     {
         float rw = (float)minimumWidth / Screen.width;
         float rh = (float)minimumHeight / Screen.height;
@@ -97,9 +88,3 @@ public class Recorder : MonoBehaviour
         }
     }
 }
-
-} // namespace UTJ {
-
-/*
- * End of Recorder.cs
- */

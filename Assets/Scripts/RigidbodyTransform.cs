@@ -1,9 +1,4 @@
-﻿/* -*- mode:CSharp; coding:utf-8-with-signature -*-
- */
-
-using UnityEngine;
-
-namespace UTJ {
+﻿using UnityEngine;
 
 public struct RigidbodyTransform
 {
@@ -17,9 +12,9 @@ public struct RigidbodyTransform
 
     public void init()
     {
-        init(ref CV.Vector3Zero, ref CV.QuaternionIdentity); 
+        init(CV.Vector3Zero, CV.QuaternionIdentity);
     }
-    public void init(ref Vector3 position, ref Quaternion rotation)
+    public void init(Vector3 position, Quaternion rotation)
     {
         transform_.init(ref position, ref rotation);
         velocity_ = CV.Vector3Zero;
@@ -187,7 +182,7 @@ public struct RigidbodyTransform
         float predicted_y = transform_.position_.y + ((velocity_.y + (acceleration_.y * dt)) * dt);
         if (predicted_y > ground)
             return;
-        velocity_.y = (ground - transform_.position_.y)/dt;
+        velocity_.y = (ground - transform_.position_.y) / dt;
         acceleration_.y = 0f;
     }
 
@@ -222,7 +217,7 @@ public struct RigidbodyTransform
         var nx = r_velocity_.x * dt;
         var ny = r_velocity_.y * dt;
         var nz = r_velocity_.z * dt;
-        var len2 = nx*nx + ny*ny + nz*nz; // sin^2
+        var len2 = nx * nx + ny * ny + nz * nz; // sin^2
         var w = Mathf.Sqrt(1f - len2); // (sin^2 + cos^2) = 1
         var q = new Quaternion(nx, ny, nz, w);
         transform_.multiplyRotationFromLeft(ref q);
@@ -276,10 +271,12 @@ public struct RigidbodyTransform
         torque.x *= torque_level;
         torque.y *= torque_level;
         torque.z *= torque_level;
-        if (max_level > 0f) {
+        if (max_level > 0f)
+        {
             var level = torque.magnitude;
-            if (max_level < level) {
-                float r = max_level/level;
+            if (max_level < level)
+            {
+                float r = max_level / level;
                 torque *= r;
             }
         }
@@ -322,12 +319,13 @@ public struct RigidbodyTransform
          * q.z = sin(theta/2)*az
          * q.w = cos(theta/2)
          */
-// #if false
+        // #if false
 #if true
         // reference
         // var q = target * Utility.Inverse(ref transform_.rotation_);
         var q = target * transform_.getInverseRotation();
-        if (q.w < 0f) {            // over 180 degree, take shorter way!
+        if (q.w < 0f)
+        {            // over 180 degree, take shorter way!
             q.x = -q.x;
             q.y = -q.y;
             q.z = -q.z;
@@ -376,7 +374,7 @@ public struct RigidbodyTransform
         var diff_x = tmp_x - velocity_.x;
         var diff_y = tmp_y - velocity_.y;
         var diff_z = tmp_z - velocity_.z;
-        var dt2 = dt*dt;
+        var dt2 = dt * dt;
         transform_.position_.x += diff_x * damper + acceleration_.x * dt2;
         transform_.position_.y += diff_y * damper + acceleration_.y * dt2;
         transform_.position_.z += diff_z * damper + acceleration_.z * dt2;
@@ -390,15 +388,10 @@ public struct RigidbodyTransform
     {
         var diff = pos - transform_.position_;
         var len = diff.magnitude;
-        if (len > 0f) {
-            diff *= (1f - length/len);
+        if (len > 0f)
+        {
+            diff *= (1f - length / len);
             transform_.position_ += diff * 0.5f;
         }
     }
 }
-
-} // namespace UTJ {
-
-/*
- * End of RigidbodyTransform.cs
- */

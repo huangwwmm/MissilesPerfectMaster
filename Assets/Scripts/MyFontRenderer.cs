@@ -1,13 +1,8 @@
-﻿/* -*- mode:CSharp; coding:utf-8-with-signature -*-
- */
+﻿using UnityEngine;
 
-using UnityEngine;
-using System.Collections;
-
-namespace UTJ {
-
-[RequireComponent(typeof(MeshFilter),typeof(MeshRenderer))]
-public class MyFontRenderer : MonoBehaviour {
+[RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
+public class MyFontRenderer : MonoBehaviour
+{
     // singleton
     static MyFontRenderer instance_;
     public static MyFontRenderer Instance { get { return instance_; } }
@@ -29,9 +24,3 @@ public class MyFontRenderer : MonoBehaviour {
         mr_.SetPropertyBlock(MyFont.Instance.getMaterialPropertyBlock());
     }
 }
-
-} // namespace UTJ {
-
-/*
- * End of MyFontRenderer.cs
- */

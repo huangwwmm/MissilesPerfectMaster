@@ -1,113 +1,80 @@
-﻿/* -*- mode:CSharp; coding:utf-8-with-signature -*-
- */
-
-using UnityEngine;
+﻿using UnityEngine;
 using System;
 
-namespace UTJ {
-
-public class MyRandom
+/// <summary>
+/// 基于Xorshift实现的伪随机数
+/// <see cref="https://en.wikipedia.org/wiki/Xorshift"/>
+/// </summary>
+public static class MyRandom
 {
-    public class Xorshift {
-        private UInt32 x;
-        private UInt32 y;
-        private UInt32 z;
-        private UInt32 w;
-        
-        public Xorshift () : this ((UInt64)DateTime.Now.Ticks) {}
-        
-        public Xorshift (UInt64 seed)
-        {
-            setSeed(seed);
-        }
- 
-        public void setSeed(UInt64 seed)
-        {
-            x = 521288629u;
-            y = (UInt32)(seed >> 32) & 0xFFFFFFFF;
-            z = (UInt32)(seed & 0xFFFFFFFF);
-            w = x ^ z;
-        }
- 
-        public UInt32 getNext()
-        {
-            UInt32 t = x ^ (x << 11);
-            x = y;
-            y = z;
-            z = w;
-            w = (w ^ (w >> 19)) ^ (t ^ (t >> 8));
-            return w;
-        }
-    }
+    private static uint ms_SeedX;
+    private static uint ms_SeedY;
+    private static uint ms_SeedZ;
+    private static uint ms_SeedW;
 
-    static Xorshift rand_ = new Xorshift();
-    
-    public static void setSeed(UInt64 seed)
+    static MyRandom()
     {
-        rand_.setSeed(seed);
+        SetSeed((ulong)DateTime.Now.Ticks);
     }
 
-    public static UInt32 get()
+    public static void SetSeed(ulong seed)
     {
-        return rand_.getNext();
+        ms_SeedX = 521288629u;
+        ms_SeedY = (uint)(seed >> 32) & 0xFFFFFFFF;
+        ms_SeedZ = (uint)(seed & 0xFFFFFFFF);
+        ms_SeedW = ms_SeedX ^ ms_SeedZ;
     }
 
+    public static uint Rand()
+    {
+        uint t = ms_SeedX ^ (ms_SeedX << 11);
+        ms_SeedX = ms_SeedY;
+        ms_SeedY = ms_SeedZ;
+        ms_SeedZ = ms_SeedW;
+        ms_SeedW = (ms_SeedW ^ (ms_SeedW >> 19)) ^ (t ^ (t >> 8));
+        return ms_SeedW;
+    }
+
+    /// <summary>
+    /// [min, max)
+    /// </summary>
     public static float Range(float min, float max)
     {
-        int val = (int)(get() & 0xffff);
-        float range = max - min;
-        return (((float)val*range) / (float)(0xffff)) + min;
+        int val = (int)(Rand() & 0xffff);
+        return (val * (max - min) / 0xffff) + min;
     }
 
+    /// <summary>
+    /// [min, max)
+    /// </summary>
     public static int Range(int min, int max)
     {
-        long val = get();
-        return (int)((val%(max-min))) + min;
+        return (int)((Rand() % (max - min))) + min;
     }
 
-    public static bool ProbabilitySlow(float ratio)
+    /// <param name="ratio">范围0 ~ 1</param>
+    public static bool Probability(float ratio)
     {
-        float v = Range(0f, 1f);
-        return (v < ratio);
-    }
-
-    public static bool Probability(float ratio) // optimized
-    {
-        UInt32 v = (rand_.getNext()) & 0xffff;
-        UInt32 p = (UInt32)(((float)(1<<16)) * ratio);
+        uint v = Rand() & 0xffff;
+        uint p = (uint)((1 << 16) * ratio);
         return (v < p);
     }
 
-    public static bool Probability(float happen_times_per_second, float dt)
+    /// <summary>
+    /// UNDONE 没懂这里是算什么的
+    /// </summary>
+    public static bool Probability(float happenTimesPerSecond, float deltaTime)
     {
         float v = Range(0f, 1f);
-        return (v < happen_times_per_second * dt);
+        return (v < happenTimesPerSecond * deltaTime);
     }
 
-    // 秒間何回発生してほしいか
-    public static bool ProbabilityForSecond(float times_for_a_second, float dt)
+    /// <summary>
+    /// 在球面上随机一点
+    /// </summary>
+    public static Vector3 PointOnSphere(float radius)
     {
-        float v = Range(0f, 1f);
-        return (v < times_for_a_second * dt);
+        Vector3 point = new Vector3(Range(-1f, 1f), Range(-1f, 1f), Range(-1f, 1f));
+        return point * (radius / point.magnitude);
     }
-
-    public static Vector3 onSphere(float radius)
-    {
-        float x = Range(-1f, 1f);
-        float y = Range(-1f, 1f);
-        float z = Range(-1f, 1f);
-        float len2 = x*x + y*y + z*z;
-        float len = Mathf.Sqrt(len2);
-        float rlen = 1.0f/len;
-        float v = rlen * radius;
-        var point = new Vector3(x*v, y*v, z*v);
-        return point;
-    }
-
 }
-
-} // namespace UTJ {
-
-/*
- * End of MyRandom.cs
- */

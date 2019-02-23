@@ -1,7 +1,4 @@
-﻿namespace UTJ {
-
-using UnityEngine;
-using UnityEngine.Profiling;
+﻿using UnityEngine.Profiling;
 
 public struct ProfileSampler : System.IDisposable
 {
@@ -15,5 +12,3 @@ public struct ProfileSampler : System.IDisposable
         Profiler.EndSample();
     }
 }
-
-} // namespace UTJ {

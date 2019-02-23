@@ -1,116 +1,118 @@
-﻿/* -*- mode:CSharp; coding:utf-8-with-signature -*-
- */
-
-using UnityEngine;
+﻿using UnityEngine;
 using System.Collections.Generic;
 
-namespace UTJ {
+/// <summary>
+/// 其实相当于一个链表, 一个Task是一个Node
+/// </summary>
+public class TaskManager
+{
+    private const int DEFAULT_CAPACITY = 1024;
 
-public class TaskManager {
+    private static TaskManager m_Instance;
 
-    // singleton
-    static TaskManager instance_;
-    public static TaskManager Instance { get { return instance_ ?? (instance_ = new TaskManager()); } }
+    private Task m_First;
+    private Task m_Last;
+    /// <summary>
+    /// <see cref="m_WillRemoves"/>
+    /// 这两个List为了避免在遍历Update Task时添加移除Task
+    /// 
+    /// 会在遍历Update后Add和Remove
+    /// </summary>
+    private List<Task> m_WillAdds;
+    /// <summary>
+    /// <see cref="m_WillAdds"/>
+    /// </summary>
+    private List<Task> m_WillRemoves;
+    private int m_Count;
 
-    private Task first_;
-    private Task last_;
-    private List<Task> add_task_list_;
-    private List<Task> del_task_list_;
-    private int count_;
-
-    public void init()
+    public static TaskManager GetInstance()
     {
-        const int MAX_CAPACITY = 1024;
-        first_ = null;
-        last_ = null;
-        count_ = 0;
-        add_task_list_ = new List<Task>();
-        add_task_list_.Capacity = MAX_CAPACITY;
-        del_task_list_ = new List<Task>();
-        del_task_list_.Capacity = MAX_CAPACITY;
+        return m_Instance ?? (m_Instance = new TaskManager());
     }
 
-    public int getCount()
+    public void Initialize()
     {
-        return count_;
+        m_First = null;
+        m_Last = null;
+        m_Count = 0;
+        m_WillAdds = new List<Task>(DEFAULT_CAPACITY);
+        m_WillRemoves = new List<Task>(DEFAULT_CAPACITY);
     }
 
-    // Taskが呼ぶ
-    public void add(Task task)
+    public int GetCount()
     {
-        add_task_list_.Add(task);
+        return m_Count;
     }
 
-    // Taskが呼ぶ
-    public void remove(Task task)
+    public void Add(Task task)
     {
-        del_task_list_.Add(task);
+        m_WillAdds.Add(task);
     }
 
-    public void restart()
+    public void Remove(Task task)
     {
-        for (var it = first_; it != null; it = it.next_) {
-            it.alive_ = false;
-        }
-        first_ = null;
-        last_ = null;
-        add_task_list_.Clear();
-        del_task_list_.Clear();
-        count_ = 0;
+        m_WillRemoves.Add(task);
     }
-    
-    public void update(float dt, double update_time)
+
+    public void DoUpdate(float deltaTime, double totalUpdateTime)
     {
-        // update
-        count_ = 0;
-        for (var it = first_; it != null; it = it.next_) {
-            it.update(dt, update_time);
-            ++count_;
+        // foreach update tasks
+        for (Task iterTask = m_First; iterTask != null; iterTask = iterTask._NextTask)
+        {
+            iterTask.DoUpdate(deltaTime, totalUpdateTime);
         }
 
-        // add
-        foreach (var it in add_task_list_) {
-            if (first_ == null) {
-                Debug.Assert(last_ == null);
-                first_ = it;
-                last_ = it;
-                it.next_ = it.prev_ = null;
-            } else {
-                it.prev_ = last_;
-                it.next_ = null;
-                last_.next_ = it;
-                last_ = it;
+        // remove tasks
+        for (int iTask = 0; iTask < m_WillRemoves.Count; iTask++)
+        {
+            Task iterTask = m_WillRemoves[iTask];
+            if (iterTask._PrevTask == null)
+            {
+                m_First = iterTask._NextTask;
+            }
+            else
+            {
+                iterTask._PrevTask._NextTask = iterTask._NextTask;
+            }
+            if (iterTask._NextTask == null)
+            {
+                m_Last = iterTask._PrevTask;
+            }
+            else
+            {
+                iterTask._NextTask._PrevTask = iterTask._PrevTask;
+            }
+            iterTask._NextTask = iterTask._PrevTask = null;
+        }
+        m_WillRemoves.Clear();
+
+        // add tasks
+        for (int iTask = 0; iTask < m_WillAdds.Count; iTask++)
+        {
+            Task iterTask = m_WillAdds[iTask];
+            if (m_First == null)
+            {
+                Debug.Assert(m_Last == null);
+                m_First = iterTask;
+                m_Last = iterTask;
+                iterTask._NextTask = iterTask._PrevTask = null;
+            }
+            else
+            {
+                iterTask._PrevTask = m_Last;
+                iterTask._NextTask = null;
+                m_Last._NextTask = iterTask;
+                m_Last = iterTask;
             }
         }
-        add_task_list_.Clear();
-
-        // delete
-        foreach (var it in del_task_list_) {
-            if (it.prev_ == null) {
-                first_ = it.next_;
-            } else {
-                it.prev_.next_ = it.next_;
-            }
-            if (it.next_ == null) {
-                last_ = it.prev_;
-            } else {
-                it.next_.prev_ = it.prev_;
-            }
-            it.next_ = it.prev_ = null;
-        }
-        del_task_list_.Clear();
+        m_WillAdds.Clear();
     }
 
-    public void renderUpdate(int front, CameraBase camera, ref DrawBuffer draw_buffer)
+    public void DoRendererUpdate(int front, CameraBase camera, ref DrawBuffer drawBuffer)
     {
-        for (var it = first_; it != null; it = it.next_) {
-            it.renderUpdate(front, camera, ref draw_buffer);
+        for (Task iterTask = m_First; iterTask != null; iterTask = iterTask._NextTask)
+        {
+            iterTask.DoRenderUpdate(front, camera, ref drawBuffer);
         }
     }
 }
-
-} // namespace UTJ {
-
-/*
- * End of TaskManager.cs
- */

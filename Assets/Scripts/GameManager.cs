@@ -1,77 +1,78 @@
-﻿/* -*- mode:CSharp; coding:utf-8-with-signature -*-
- */
-
-using UnityEngine;
+﻿using UnityEngine;
 using System.Collections;
-using System.Collections.Generic;
-
-namespace UTJ {
 
 public class GameManager
 {
-    // singleton
-    static GameManager instance_;
-    public static GameManager Instance { get { return instance_ ?? (instance_ = new GameManager()); } }
+    private const float FIGHTER_RANGE_POSITION = 300f;
 
-    private IEnumerator enumerator_;
-    private double update_time_;
+    private static GameManager ms_Instance;
 
-    public void init(bool debug)
+    private IEnumerator m_Enumerator;
+    /// <summary>
+    /// Cahce这个变量是为了在Ienumerator中使用
+    /// </summary>
+    private double m_TotalUpdateTime;
+
+    public static GameManager GetInstance()
     {
-        if (!debug) {
-            enumerator_ = act();    // この瞬間は実行されない
-        } else {
-            enumerator_ = act_debug();
-        }
+        return ms_Instance ?? (ms_Instance = new GameManager());
     }
 
-    public void update(float dt, double update_time)
+    public void Initialize(bool debug)
     {
-        update_time_ = update_time;
-        enumerator_.MoveNext();
+        m_Enumerator = debug ? DEBUG_DoUpdate_Co() : DoUpdate_Co();
     }
 
-    private IEnumerator act()
+    public void DoUpdate(float dt, double totalUpdateTime)
     {
-        const float RANGE = 300f;
-        for (var i = 0; i < 100; ++i) {
-            var position = new Vector3(MyRandom.Probability(0.5f) ? -RANGE : RANGE,
-                                       MyRandom.Range(-RANGE, RANGE),
-                                       MyRandom.Range(-RANGE, RANGE));
-            var rotation = Quaternion.LookRotation(MyRandom.onSphere(1f));
-            Fighter.create(Fighter.Type.Alpha, ref position, ref rotation, update_time_);
+        m_TotalUpdateTime = totalUpdateTime;
+        m_Enumerator.MoveNext();
+    }
+
+    /// <summary>
+    /// 启动时创建100个Fighter
+    /// </summary>
+    private IEnumerator DoUpdate_Co()
+    {
+        for (var iFighter = 0; iFighter < 100; ++iFighter)
+        {
+            Fighter.create(Fighter.Type.Alpha
+                , new Vector3(MyRandom.Probability(0.5f) ? -FIGHTER_RANGE_POSITION : FIGHTER_RANGE_POSITION
+                    , MyRandom.Range(-FIGHTER_RANGE_POSITION, FIGHTER_RANGE_POSITION)
+                    , MyRandom.Range(-FIGHTER_RANGE_POSITION, FIGHTER_RANGE_POSITION))
+                , Quaternion.LookRotation(MyRandom.PointOnSphere(1f))
+                , m_TotalUpdateTime);
         }
-        for (;;) {
+
+        while (true)
+        {
             yield return null;
         }
     }
 
-    private IEnumerator act_debug()
+    /// <summary>
+    /// 每隔一段时间发射一个Missile
+    /// </summary>
+    /// <returns></returns>
+    private IEnumerator DEBUG_DoUpdate_Co()
     {
-        int target_id = MissileManager.Instance.registTarget(update_time_);
-        MissileManager.Instance.setTargetRadius(target_id, 1f /* radius */);
+        int missileId = MissileManager.Instance.RegistMissile(m_TotalUpdateTime);
+        MissileManager.Instance.SetMissileRadius(missileId, 1f);
+        MissileManager.Instance.UpdateMissilePosition(missileId, new Vector3(0f, 0f, 10f));
+
+        while (true)
         {
-            var pos = new Vector3(0f, 0f, 10f);
-            MissileManager.Instance.updateTarget(target_id, ref pos);
-        }
-        for (;;) {
-            var lpos = new Vector3(0f, 0f, -40f);
-            var rot = Quaternion.Euler(0f, -30f, 0f);
-            MissileManager.Instance.spawn(ref lpos,
-                                          ref rot,
-                                          target_id, update_time_);
-            for (var i = new Utility.WaitForSeconds(2f, update_time_); !i.end(update_time_);) {
+            MissileManager.Instance.Spawn(new Vector3(0f, 0f, -40f)
+                , Quaternion.Euler(0f, -30f, 0f)
+                , missileId, m_TotalUpdateTime);
+
+            for (var i = new Utility.WaitForSeconds(2f, m_TotalUpdateTime); !i.end(m_TotalUpdateTime);)
+            {
                 var pos = new Vector3(100f, 0f, 10f);
-                MissileManager.Instance.updateTarget(target_id, ref pos);
-                MissileManager.Instance.checkHitAndClear(target_id);
+                MissileManager.Instance.UpdateMissilePosition(missileId, pos);
+                MissileManager.Instance.checkHitAndClear(missileId);
                 yield return null;
             }
         }
     }
 }
-
-} // namespace UTJ {
-
-/*
- * End of GameManager.cs
- */

@@ -1,14 +1,7 @@
-﻿/* -*- mode:CSharp; coding:utf-8-with-signature -*-
- */
-using UnityEngine;
-using System.Collections;
-using System.Collections.Generic;
-using System.Threading;
-using UnityEngine.Profiling;
+﻿using UnityEngine;
 
-namespace UTJ {
-
-public class SystemManager : MonoBehaviour {
+public class SystemManager : MonoBehaviour
+{
 
     // singleton
     static SystemManager instance_;
@@ -42,20 +35,25 @@ public class SystemManager : MonoBehaviour {
 
     const int DefaultFps = 60;
     const float RENDER_FPS = 60f;
-    const float RENDER_DT = 1f/RENDER_FPS;
+    const float RENDER_DT = 1f / RENDER_FPS;
     public System.Diagnostics.Stopwatch stopwatch_;
     int rendering_front_;
     public int getRenderingFront() { return rendering_front_; }
     DrawBuffer[] draw_buffer_;
     float dt_;
-    public void setFPS(int fps)    {
+    public void setFPS(int fps)
+    {
         dt_ = 1f / (float)fps;
     }
-    public int getFPS() {
-        if (dt_ <= 0f) {
+    public int getFPS()
+    {
+        if (dt_ <= 0f)
+        {
             return 0;
-        } else {
-            return (int)(1f/dt_ + 0.5f);
+        }
+        else
+        {
+            return (int)(1f / dt_ + 0.5f);
         }
     }
 
@@ -99,7 +97,7 @@ public class SystemManager : MonoBehaviour {
 
     void Start()
     {
-        instance_ = GameObject.Find("system_manager").GetComponent<SystemManager>();;
+        instance_ = GameObject.Find("system_manager").GetComponent<SystemManager>(); ;
         initialize();
     }
 
@@ -113,7 +111,8 @@ public class SystemManager : MonoBehaviour {
 
     void set_camera()
     {
-        if (!spectator_mode_) {
+        if (!spectator_mode_)
+        {
             debug_camera_.setup(spectator_camera_);
         }
         debug_camera_.active_ = !spectator_mode_;
@@ -122,11 +121,12 @@ public class SystemManager : MonoBehaviour {
 
     void initialize()
     {
-        MyRandom.setSeed(12345L);
+        MyRandom.SetSeed(12345L);
         camera_final_ = GameObject.Find("FinalCamera").GetComponent<Camera>();
         camera_final_.enabled = false;
-        if ((float)Screen.width / (float)Screen.height < 16f/9f) {
-            var size = camera_final_.orthographicSize * ((16f/9f) * ((float)Screen.height/(float)Screen.width));
+        if ((float)Screen.width / (float)Screen.height < 16f / 9f)
+        {
+            var size = camera_final_.orthographicSize * ((16f / 9f) * ((float)Screen.height / (float)Screen.width));
             camera_final_.orthographicSize = size;
         }
         meter_draw_ = true;
@@ -152,7 +152,7 @@ public class SystemManager : MonoBehaviour {
         MissileManager.Instance.initialize(camera_);
         InputManager.Instance.init();
         Controller.Instance.init(false /* auto */);
-        TaskManager.Instance.init();
+        TaskManager.GetInstance().Initialize();
         Fighter.createPool();
         Spark.Instance.init(spark_material_);
         Debris.Instance.init(debris_material_);
@@ -164,7 +164,8 @@ public class SystemManager : MonoBehaviour {
         PerformanceMeter.Instance.init();
 
         draw_buffer_ = new DrawBuffer[2];
-        for (int i = 0; i < 2; ++i) {
+        for (int i = 0; i < 2; ++i)
+        {
             draw_buffer_[i].init();
         }
 
@@ -174,7 +175,8 @@ public class SystemManager : MonoBehaviour {
 
         // audio
         audio_sources_explosion_ = new AudioSource[AUDIOSOURCE_EXPLOSION_MAX];
-        for (var i = 0; i < AUDIOSOURCE_EXPLOSION_MAX; ++i) {
+        for (var i = 0; i < AUDIOSOURCE_EXPLOSION_MAX; ++i)
+        {
             audio_sources_explosion_[i] = gameObject.AddComponent<AudioSource>();
             audio_sources_explosion_[i].clip = se_explosion_;
             audio_sources_explosion_[i].volume = 0.01f;
@@ -182,14 +184,15 @@ public class SystemManager : MonoBehaviour {
         }
         audio_source_explosion_index_ = 0;
         audio_sources_laser_ = new AudioSource[AUDIOSOURCE_LASER_MAX];
-        for (var i = 0; i < AUDIOSOURCE_LASER_MAX; ++i) {
+        for (var i = 0; i < AUDIOSOURCE_LASER_MAX; ++i)
+        {
             audio_sources_laser_[i] = gameObject.AddComponent<AudioSource>();
             audio_sources_laser_[i].clip = se_laser_;
             audio_sources_laser_[i].volume = 0.025f;
         }
         audio_source_laser_index_ = 0;
-    
-        GameManager.Instance.init(debug_mode_);
+
+        GameManager.GetInstance().Initialize(debug_mode_);
 
 #if UNITY_PS4 || UNITY_EDITOR || UNITY_STANDALONE_WIN || UNITY_STANDALONE_OSX
         int rw = 1920;
@@ -229,15 +232,16 @@ public class SystemManager : MonoBehaviour {
         Controller.Instance.fetch(update_time_);
         var controller = Controller.Instance.getLatest();
 
-         // update
+        // update
         float dt = dt_;
-        if (pause_) {
+        if (pause_)
+        {
             dt = 0f;
         }
         spectator_camera_.rotateOffsetRotation(-controller.flick_y_, controller.flick_x_);
         UnityEngine.Profiling.Profiler.BeginSample("Task update");
-        GameManager.Instance.update(dt, update_time_);
-        TaskManager.Instance.update(dt, update_time_);
+        GameManager.GetInstance().DoUpdate(dt, update_time_);
+        TaskManager.GetInstance().DoUpdate(dt, update_time_);
         UnityEngine.Profiling.Profiler.EndSample();
         ++update_frame_;
         update_time_ += dt;
@@ -258,15 +262,16 @@ public class SystemManager : MonoBehaviour {
 
         // renderUpdate
         UnityEngine.Profiling.Profiler.BeginSample("renderUpdate");
-         draw_buffer_[updating_front].beginRender();
-        TaskManager.Instance.renderUpdate(updating_front,
+        draw_buffer_[updating_front].beginRender();
+        TaskManager.GetInstance().DoRendererUpdate(updating_front,
                                           current_camera,
                                           ref draw_buffer_[updating_front]);
         draw_buffer_[updating_front].endRender();
         UnityEngine.Profiling.Profiler.EndSample();
-        
+
         // performance meter
-        if (meter_draw_) {
+        if (meter_draw_)
+        {
             PerformanceMeter.Instance.drawMeters(updating_front);
         }
 
@@ -280,7 +285,7 @@ public class SystemManager : MonoBehaviour {
         PerformanceMeter.Instance.endRenderUpdate();
     }
 
-    public float realtimeSinceStartup { get { return ((float)stopwatch_.ElapsedTicks) /  (float)System.Diagnostics.Stopwatch.Frequency; } }
+    public float realtimeSinceStartup { get { return ((float)stopwatch_.ElapsedTicks) / (float)System.Diagnostics.Stopwatch.Frequency; } }
 
     public void registSound(DrawBuffer.SE se)
     {
@@ -298,8 +303,10 @@ public class SystemManager : MonoBehaviour {
         Utility.GetPlanesFromFrustum(frustum_planes_, ref vp);
 
         int alpha_count = 0;
-        for (var i = 0; i < draw_buffer.object_num_; ++i) {
-            switch (draw_buffer.object_buffer_[i].type_) {
+        for (var i = 0; i < draw_buffer.object_num_; ++i)
+        {
+            switch (draw_buffer.object_buffer_[i].type_)
+            {
                 case DrawBuffer.Type.None:
                     Debug.Assert(false);
                     break;
@@ -308,7 +315,8 @@ public class SystemManager : MonoBehaviour {
                 case DrawBuffer.Type.FighterAlpha:
                     if (Utility.InFrustum(frustum_planes_,
                                           ref draw_buffer.object_buffer_[i].transform_.position_,
-                                          2f /* radius */)) {
+                                          2f /* radius */))
+                    {
                         draw_buffer.object_buffer_[i].transform_.getLocalToWorldMatrix(ref alpha_matrices_[alpha_count]);
                         ++alpha_count;
                     }
@@ -317,7 +325,7 @@ public class SystemManager : MonoBehaviour {
         }
         Graphics.DrawMeshInstanced(fighter_alpha_mesh_, 0 /* submeshIndex */,
                                    fighter_alpha_material_,
-                                   alpha_matrices_, 
+                                   alpha_matrices_,
                                    alpha_count,
                                    null,
                                    UnityEngine.Rendering.ShadowCastingMode.Off,
@@ -327,7 +335,7 @@ public class SystemManager : MonoBehaviour {
         alpha_burner_material_.SetFloat(shader_CurrentTime, (float)update_time_);
         Graphics.DrawMeshInstanced(alpha_burner_mesh_, 0 /* submeshIndex */,
                                    alpha_burner_material_,
-                                   alpha_matrices_, 
+                                   alpha_matrices_,
                                    alpha_count,
                                    null,
                                    UnityEngine.Rendering.ShadowCastingMode.Off,
@@ -335,20 +343,25 @@ public class SystemManager : MonoBehaviour {
                                    0 /* layer */,
                                    null /* camera */);
         // audio
-        for (var i = 0; i < AUDIO_CHANNEL_MAX; ++i) {
-            if (draw_buffer.se_[i] != DrawBuffer.SE.None) {
-                switch (draw_buffer.se_[i]) {
+        for (var i = 0; i < AUDIO_CHANNEL_MAX; ++i)
+        {
+            if (draw_buffer.se_[i] != DrawBuffer.SE.None)
+            {
+                switch (draw_buffer.se_[i])
+                {
                     case DrawBuffer.SE.Explosion:
                         audio_sources_explosion_[audio_source_explosion_index_].Play();
                         ++audio_source_explosion_index_;
-                        if (audio_source_explosion_index_ >= AUDIOSOURCE_EXPLOSION_MAX) {
+                        if (audio_source_explosion_index_ >= AUDIOSOURCE_EXPLOSION_MAX)
+                        {
                             audio_source_explosion_index_ = 0;
                         }
                         break;
                     case DrawBuffer.SE.Laser:
                         audio_sources_laser_[audio_source_laser_index_].Play();
                         ++audio_source_laser_index_;
-                        if (audio_source_laser_index_ >= AUDIOSOURCE_LASER_MAX) {
+                        if (audio_source_laser_index_ >= AUDIOSOURCE_LASER_MAX)
+                        {
                             audio_source_laser_index_ = 0;
                         }
                         break;
@@ -381,11 +394,14 @@ public class SystemManager : MonoBehaviour {
 
     void end_of_frame()
     {
-        if (Time.deltaTime > 0) {
+        if (Time.deltaTime > 0)
+        {
             ++render_sync_frame_;
             ++render_frame_;
             stopwatch_.Start();
-        } else {
+        }
+        else
+        {
             stopwatch_.Stop();
         }
     }
@@ -394,13 +410,14 @@ public class SystemManager : MonoBehaviour {
     void Update()
     {
         PerformanceMeter.Instance.beginRender();
-        if (!initialized_) {
+        if (!initialized_)
+        {
             return;
         }
         // MissileManager.Instance.SyncComputeBuffer();
 
         PerformanceMeter.Instance.beginBehaviourUpdate();
-        
+
         InputManager.Instance.update();
         UnityEngine.Profiling.Profiler.BeginSample("main_loop");
         main_loop();
@@ -415,7 +432,8 @@ public class SystemManager : MonoBehaviour {
 
     void LateUpdate()
     {
-        if (!initialized_) {
+        if (!initialized_)
+        {
             return;
         }
         camera_update();
@@ -440,10 +458,13 @@ public class SystemManager : MonoBehaviour {
     }
     public void OnFPSSliderChange(float value)
     {
-        if (value <= 0f) {
+        if (value <= 0f)
+        {
             dt_ = 0f;
-        } else {
-            dt_ = 1f/value;
+        }
+        else
+        {
+            dt_ = 1f / value;
         }
     }
     public void OnMeterToggle()
@@ -461,11 +482,5 @@ public class SystemManager : MonoBehaviour {
         MissileManager.Instance.onSceneGUI(sceneView.camera);
     }
 #endif
-    
+
 }
-
-} // namespace UTJ {
-
-/*
- * End of SystemManager.cs
- */

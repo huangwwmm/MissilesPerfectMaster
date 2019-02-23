@@ -1,9 +1,4 @@
-﻿/* -*- mode:CSharp; coding:utf-8-with-signature -*-
- */
-
-using UnityEngine;
-
-namespace UTJ {
+﻿using UnityEngine;
 
 public struct MyTransform
 {
@@ -15,7 +10,7 @@ public struct MyTransform
     {
         init(ref CV.Vector3Zero, ref CV.QuaternionIdentity);
     }
-    
+
     public void init(ref Vector3 position, ref Quaternion rotation)
     {
         position_ = position;
@@ -56,9 +51,12 @@ public struct MyTransform
         v2 += rotation_.y * rotation_.y;
         v2 += rotation_.z * rotation_.z;
         v2 += rotation_.w * rotation_.w;
-        if (v2 == 0) {
+        if (v2 == 0)
+        {
             rotation_.w = 1f;
-        } else {
+        }
+        else
+        {
             float inv = 1f / Mathf.Sqrt(v2);
             rotation_.x *= inv;
             rotation_.y *= inv;
@@ -142,7 +140,8 @@ public struct MyTransform
                            rot_matrix_.m22 * z);
     }
 
-    public Quaternion getInverseRotation() {
+    public Quaternion getInverseRotation()
+    {
         return Utility.Inverse(ref rotation_);
     }
 
@@ -174,9 +173,3 @@ public struct MyTransform
         mat.SetTRS(position_, rotation_, CV.Vector3One);
     }
 }
-
-} // namespace UTJ {
-
-/*
- * End of MyTransform.cs
- */

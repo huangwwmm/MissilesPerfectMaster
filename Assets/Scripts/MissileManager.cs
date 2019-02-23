@@ -1,7 +1,4 @@
-﻿/* -*- mode:CSharp; coding:utf-8-with-signature -*-
- */
-
-#if (UNITY_2018_1_OR_NEWER && (UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN)) || (!UNITY_EDITOR_WIN && UNITY_SWITCH)
+﻿#if (UNITY_2018_1_OR_NEWER && (UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN)) || (!UNITY_EDITOR_WIN && UNITY_SWITCH)
 # define ENABLE_GPUREADBACK
 # define GPUREADBACK_COULD_BE_QUEUED
 #endif
@@ -14,8 +11,6 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using System.Runtime.InteropServices;
-
-namespace UTJ {
 
 [StructLayout(LayoutKind.Sequential)]
 public struct SpawnData
@@ -71,7 +66,8 @@ public struct SortData
     public int packed;
 }
 
-public class MissileManager : MonoBehaviour {
+public class MissileManager : MonoBehaviour
+{
 
     // singleton
     static MissileManager instance_;
@@ -93,7 +89,7 @@ public class MissileManager : MonoBehaviour {
     // const float FLOAT_MAX = System.Single.MaxValue;
     const float FLOAT_MAX = 1e+38f;
     const int THREAD_MAX = 512;
-    const int MISSILE_MAX = THREAD_MAX*16;
+    const int MISSILE_MAX = THREAD_MAX * 16;
     const int SPAWN_MAX = 64;
     const int TARGET_MAX = 256;
     const int TRAIL_LENGTH = 32;
@@ -116,7 +112,7 @@ public class MissileManager : MonoBehaviour {
     uint[] explosion_drawindirect_args_;
     MissileData[] missile_data_;
     SpawnData[] spawn_data_;
-    TargetData[] target_data_;
+    TargetData[] m_Missiles;
     ResultData[] missile_result_list_;
     SortData[] missile_sort_key_list_;
     Vector4[] frustum_planes_;
@@ -162,13 +158,13 @@ public class MissileManager : MonoBehaviour {
     public int exist_missile_count_;
 
 #if ENABLE_GPUREADBACK
-# if GPUREADBACK_COULD_BE_QUEUED
+#if GPUREADBACK_COULD_BE_QUEUED
     const int MAX_RQUESTS = 4;
     UnityEngine.Rendering.AsyncGPUReadbackRequest[] requests_;
     int request_index_;
-# else
+#else
     UnityEngine.Experimental.Rendering.AsyncGPUReadbackRequest requests_;
-# endif
+#endif
 #endif
 
     public void initialize(Camera camera)
@@ -182,15 +178,16 @@ public class MissileManager : MonoBehaviour {
 
         // mesh trail
         {
-            var vertices = new Vector3[TRAIL_LENGTH*2];
-            var triangles = new int[(TRAIL_LENGTH-1)*6];
-            for (var i = 0; i < TRAIL_LENGTH-1; ++i) {
-                triangles[i*6+0] = (i+0)*2+0;
-                triangles[i*6+1] = (i+0)*2+1;
-                triangles[i*6+2] = (i+1)*2+0;
-                triangles[i*6+3] = (i+1)*2+0;
-                triangles[i*6+4] = (i+0)*2+1;
-                triangles[i*6+5] = (i+1)*2+1;
+            var vertices = new Vector3[TRAIL_LENGTH * 2];
+            var triangles = new int[(TRAIL_LENGTH - 1) * 6];
+            for (var i = 0; i < TRAIL_LENGTH - 1; ++i)
+            {
+                triangles[i * 6 + 0] = (i + 0) * 2 + 0;
+                triangles[i * 6 + 1] = (i + 0) * 2 + 1;
+                triangles[i * 6 + 2] = (i + 1) * 2 + 0;
+                triangles[i * 6 + 3] = (i + 1) * 2 + 0;
+                triangles[i * 6 + 4] = (i + 0) * 2 + 1;
+                triangles[i * 6 + 5] = (i + 1) * 2 + 1;
             }
             mesh_trail_ = new Mesh();
             mesh_trail_.name = "trail";
@@ -216,7 +213,8 @@ public class MissileManager : MonoBehaviour {
         missile_drawindirect_args_ = new uint[5] { 0, 0, 0, 0, 0 };
         burner_drawindirect_args_ = new uint[5] { 0, 0, 0, 0, 0 };
         missile_data_ = new MissileData[MISSILE_MAX];
-        for (var i = 0; i < missile_data_.Length; ++i) {
+        for (var i = 0; i < missile_data_.Length; ++i)
+        {
             missile_data_[i].position_ = CV.Vector3Zero;
             missile_data_[i].spawn_time_ = FLOAT_MAX;
             missile_data_[i].omega_ = CV.Vector3Zero;
@@ -225,19 +223,22 @@ public class MissileManager : MonoBehaviour {
             missile_data_[i].dead_time_ = FLOAT_MAX;
         }
         spawn_data_ = new SpawnData[SPAWN_MAX];
-        for (var i = 0; i < spawn_data_.Length; ++i) {
+        for (var i = 0; i < spawn_data_.Length; ++i)
+        {
             spawn_data_[i].missile_id_ = -1;
             spawn_data_[i].target_id_ = -1;
             spawn_data_[i].valid_ = 0;
         }
-        target_data_ = new TargetData[TARGET_MAX];
-        for (var i = 0; i < target_data_.Length; ++i) {
-            target_data_[i].dead_time_ = FLOAT_MAX;
-            target_data_[i].spawn_time_ = FLOAT_MAX;
+        m_Missiles = new TargetData[TARGET_MAX];
+        for (var i = 0; i < m_Missiles.Length; ++i)
+        {
+            m_Missiles[i].dead_time_ = FLOAT_MAX;
+            m_Missiles[i].spawn_time_ = FLOAT_MAX;
         }
 
-        missile_result_list_ = new ResultData[MISSILE_MAX*2];
-        for (var i = 0; i < missile_result_list_.Length; ++i) {
+        missile_result_list_ = new ResultData[MISSILE_MAX * 2];
+        for (var i = 0; i < missile_result_list_.Length; ++i)
+        {
             missile_result_list_[i].cond_ = 0;
             missile_result_list_[i].dist_ = 0;
             missile_result_list_[i].target_id_ = 0;
@@ -246,35 +247,40 @@ public class MissileManager : MonoBehaviour {
 
         missile_sort_key_list_ = new SortData[MISSILE_MAX];
         missile_status_list_ = new float[MISSILE_MAX];
-        for (var i = 0; i < missile_status_list_.Length; ++i) {
+        for (var i = 0; i < missile_status_list_.Length; ++i)
+        {
             missile_status_list_[i] = 0f;
         }
         frustum_planes_ = new Vector4[6];
-        for (var i = 0; i < frustum_planes_.Length; ++i) {
-            frustum_planes_[i] = new Vector4(0,0,0,0);
+        for (var i = 0; i < frustum_planes_.Length; ++i)
+        {
+            frustum_planes_[i] = new Vector4(0, 0, 0, 0);
         }
 
         target_hit_list_ = new byte[TARGET_MAX];
-        for (var i = 0; i < target_hit_list_.Length; ++i) {
+        for (var i = 0; i < target_hit_list_.Length; ++i)
+        {
             target_hit_list_[i] = 0;
         }
         spawn_index_ = 0;
 
         trail_drawindirect_args_ = new uint[5] { 0, 0, 0, 0, 0 };
-        trail_data_ = new Vector4[TRAIL_LENGTH*MISSILE_MAX];
-        for (var i = 0; i < trail_data_.Length; ++i) {
+        trail_data_ = new Vector4[TRAIL_LENGTH * MISSILE_MAX];
+        for (var i = 0; i < trail_data_.Length; ++i)
+        {
             trail_data_[i].x = 0f;
             trail_data_[i].y = 0f;
             trail_data_[i].z = 0f;
             trail_data_[i].w = 0f;
         }
         trail_index_list_ = new int[MISSILE_MAX];
-        for (var i = 0; i < trail_index_list_.Length; ++i) {
+        for (var i = 0; i < trail_index_list_.Length; ++i)
+        {
             trail_index_list_[i] = 0;
         }
 
         explosion_drawindirect_args_ = new uint[5] { 0, 0, 0, 0, 0 };
-        
+
         /* compute buffers */
         // missile
         cbuffer_missile_drawindirect_args_ = new ComputeBuffer(1 /* count */,
@@ -292,8 +298,8 @@ public class MissileManager : MonoBehaviour {
         cbuffer_missile_ = new ComputeBuffer(missile_data_.Length, Marshal.SizeOf(typeof(MissileData)));
         cbuffer_missile_.SetData(missile_data_);
         cbuffer_spawn_ = new ComputeBuffer(spawn_data_.Length, Marshal.SizeOf(typeof(SpawnData)));
-        cbuffer_target_ = new ComputeBuffer(target_data_.Length, Marshal.SizeOf(typeof(TargetData)));
-        cbuffer_target_.SetData(target_data_);
+        cbuffer_target_ = new ComputeBuffer(m_Missiles.Length, Marshal.SizeOf(typeof(TargetData)));
+        cbuffer_target_.SetData(m_Missiles);
         cbuffer_missile_result_ = new ComputeBuffer(missile_result_list_.Length, Marshal.SizeOf(typeof(ResultData)));
         cbuffer_missile_result_.SetData(missile_result_list_);
         cbuffer_missile_sort_key_list_ = new ComputeBuffer(missile_sort_key_list_.Length, Marshal.SizeOf(typeof(SortData)));
@@ -322,15 +328,15 @@ public class MissileManager : MonoBehaviour {
         cbuffer_explosion_drawindirect_args_.SetData(explosion_drawindirect_args_);
 
 #if ENABLE_GPUREADBACK
-# if GPUREADBACK_COULD_BE_QUEUED
+#if GPUREADBACK_COULD_BE_QUEUED
         requests_ = new UnityEngine.Rendering.AsyncGPUReadbackRequest[MAX_RQUESTS];
         request_index_ = 0;
         requests_[request_index_] = UnityEngine.Rendering.AsyncGPUReadback.Request(cbuffer_missile_result_);
         ++request_index_;
         request_index_ %= MAX_RQUESTS;
-# else
+#else
         requests_ = UnityEngine.Experimental.Rendering.AsyncGPUReadback.Request(cbuffer_missile_result_);
-# endif
+#endif
 #endif
 
         // setup for missile_spawn compute
@@ -386,7 +392,8 @@ public class MissileManager : MonoBehaviour {
 
     IEnumerator frame_loop()
     {
-        for (;;) {
+        for (; ; )
+        {
             yield return new WaitForEndOfFrame();
 #if SYNC_COMPUTE_END_OF_FRAME
             sync_compute_buffer();
@@ -426,7 +433,7 @@ public class MissileManager : MonoBehaviour {
         cbuffer_burner_drawindirect_args_.Release();
         cbuffer_missile_drawindirect_args_.Release();
     }
-    
+
     private void dispatch_compute(float dt, float current_time)
     {
         // set data for compute
@@ -435,7 +442,7 @@ public class MissileManager : MonoBehaviour {
         UnityEngine.Profiling.Profiler.EndSample();
         cshader_spawn_.SetFloat(shader_CurrentTime, current_time);
         UnityEngine.Profiling.Profiler.BeginSample("<SetData>target_data_");
-        cbuffer_target_.SetData(target_data_);
+        cbuffer_target_.SetData(m_Missiles);
         UnityEngine.Profiling.Profiler.EndSample();
         cshader_update_.SetFloat(shader_DT, dt);
         cshader_update_.SetFloat(shader_CurrentTime, current_time);
@@ -451,10 +458,11 @@ public class MissileManager : MonoBehaviour {
             cbuffer_frustum_planes_.SetData(frustum_planes_);
             UnityEngine.Profiling.Profiler.EndSample();
         }
-        if (spawn_index_ > 0) {
+        if (spawn_index_ > 0)
+        {
             cshader_spawn_.Dispatch(ckernel_spawn_, 1, 1, 1);
         }
-        cshader_update_.Dispatch(ckernel_update_, MISSILE_MAX/THREAD_MAX, 1, 1);
+        cshader_update_.Dispatch(ckernel_update_, MISSILE_MAX / THREAD_MAX, 1, 1);
         cshader_sort_.Dispatch(ckernel_sort_, 1, 1, 1);
     }
 
@@ -483,7 +491,8 @@ public class MissileManager : MonoBehaviour {
         explosion_drawindirect_args_[1] = (uint)missile_alive_count;
         cbuffer_explosion_drawindirect_args_.SetData(explosion_drawindirect_args_);
 
-        if (missile_alive_count > 0) {
+        if (missile_alive_count > 0)
+        {
             Graphics.DrawMeshInstancedIndirect(mesh_missile_,
                                                0 /* submesh */,
                                                material_missile_,
@@ -535,24 +544,29 @@ public class MissileManager : MonoBehaviour {
     {
         UnityEngine.Profiling.Profiler.BeginSample("<check>missile_result_list_");
         int max_vol = 0;
-        for (var i = 0; i < MISSILE_MAX; ++i) {
+        for (var i = 0; i < MISSILE_MAX; ++i)
+        {
             int cond0 = missile_result_list_[i].cond_; // even frame
-            int cond1 = missile_result_list_[i+MISSILE_MAX].cond_; // odd frame
-            if (cond0 != 0 || cond1 != 0) { // ミサイル消滅信号
+            int cond1 = missile_result_list_[i + MISSILE_MAX].cond_; // odd frame
+            if (cond0 != 0 || cond1 != 0)
+            { // ミサイル消滅信号
                 if (missile_status_list_[i] > 0f &&
-                    missile_status_list_[i] <= dt) { // ミサイル消滅の瞬間
+                    missile_status_list_[i] <= dt)
+                { // ミサイル消滅の瞬間
                     missile_status_list_[i] = -TRAIL_REMAIN_PERIOD_AFTER_MISSILE_DEATH; // 煙のぶん残す
-                    if (missile_result_list_[i].dist_ > max_vol) {
+                    if (missile_result_list_[i].dist_ > max_vol)
+                    {
                         max_vol = missile_result_list_[i].dist_;
                     }
                     if ((cond0 & 2) != 0 ||
-                        (cond1 & 2) != 0) {            // 命中
+                        (cond1 & 2) != 0)
+                    {            // 命中
                         target_hit_list_[missile_result_list_[i].target_id_] = 1; // ヒット通知
                     }
                 }
             }
         }
-        PerformanceMeter.Instance.setFrameDiff((frame_count_&0xff) - missile_result_list_[0].frame_count_);
+        PerformanceMeter.Instance.setFrameDiff((frame_count_ & 0xff) - missile_result_list_[0].frame_count_);
         UnityEngine.Profiling.Profiler.EndSample();
         return max_vol;
     }
@@ -561,19 +575,26 @@ public class MissileManager : MonoBehaviour {
     {
         UnityEngine.Profiling.Profiler.BeginSample("<set>alive_list");
         int missile_alive_count = 0;
-        for (var i = 0; i < missile_status_list_.Length; ++i) {
+        for (var i = 0; i < missile_status_list_.Length; ++i)
+        {
             float missile_status = missile_status_list_[i];
-            if (missile_status > 0f) {
-                if (missile_status > dt) { // must live for a few frames.
+            if (missile_status > 0f)
+            {
+                if (missile_status > dt)
+                { // must live for a few frames.
                     missile_status_list_[i] -= dt;      // countdown.
                 }
-            } else if (missile_status < 0f) {
+            }
+            else if (missile_status < 0f)
+            {
                 missile_status_list_[i] += dt;
-                if (missile_status_list_[i] > 0f) {
+                if (missile_status_list_[i] > 0f)
+                {
                     missile_status_list_[i] = 0f;
                 }
             }
-            if (missile_status != 0f) {
+            if (missile_status != 0f)
+            {
                 ++missile_alive_count;
             }
         }
@@ -588,19 +609,24 @@ public class MissileManager : MonoBehaviour {
         setup_target((float)update_time);
 
 #if ENABLE_GPUREADBACK
-# if GPUREADBACK_COULD_BE_QUEUED
-        for (var k = 0; k < MAX_RQUESTS; ++k) {
-            if (requests_[k].done && !requests_[k].hasError) {
+#if GPUREADBACK_COULD_BE_QUEUED
+        for (var k = 0; k < MAX_RQUESTS; ++k)
+        {
+            if (requests_[k].done && !requests_[k].hasError)
+            {
                 Unity.Collections.NativeArray<ResultData> buffer = requests_[k].GetData<ResultData>();
-                for (var i = 0; i < missile_result_list_.Length; ++i) {
+                for (var i = 0; i < missile_result_list_.Length; ++i)
+                {
                     missile_result_list_[i] = buffer[i];
                 }
                 request_index_ = k;
                 break;
             }
         }
-        for (var k = 0; k < MAX_RQUESTS; ++k) {
-            if (requests_[request_index_].done) {
+        for (var k = 0; k < MAX_RQUESTS; ++k)
+        {
+            if (requests_[request_index_].done)
+            {
                 requests_[request_index_] = UnityEngine.Rendering.AsyncGPUReadback.Request(cbuffer_missile_result_);
                 break;
             }
@@ -608,7 +634,7 @@ public class MissileManager : MonoBehaviour {
             request_index_ %= MAX_RQUESTS;
             Debug.Assert(k < MAX_RQUESTS);
         }
-# else
+#else
         if (requests_.done) {
             if (!requests_.hasError) {
                 Unity.Collections.NativeArray<ResultData> buffer = requests_.GetData<ResultData>();
@@ -620,13 +646,15 @@ public class MissileManager : MonoBehaviour {
             }
             requests_ = UnityEngine.Experimental.Rendering.AsyncGPUReadback.Request(cbuffer_missile_result_);
         }
-# endif
+#endif
 #endif
 
         // check dead missiles with ComputeBuffer
-        if (frame_count_ % 2 != 0) {
+        if (frame_count_ % 2 != 0)
+        {
             int max_vol = check_missile_result(dt);
-            if (max_vol > 240) {
+            if (max_vol > 240)
+            {
                 SystemManager.Instance.registSound(DrawBuffer.SE.Explosion); // 爆発音
             }
         }
@@ -636,7 +664,7 @@ public class MissileManager : MonoBehaviour {
 
         // gpu execution
         dispatch_compute(dt, (float)update_time);
-        
+
         // draw
         draw(camera_, (float)update_time, missile_alive_count);
         drawn_update_time_ = (float)update_time;
@@ -644,7 +672,8 @@ public class MissileManager : MonoBehaviour {
 
         // cleanup
         spawn_index_ = 0;
-        for (var i = 0; i < spawn_data_.Length; ++i) {
+        for (var i = 0; i < spawn_data_.Length; ++i)
+        {
             spawn_data_[i].valid_ = 0;
         }
     }
@@ -652,7 +681,7 @@ public class MissileManager : MonoBehaviour {
     public void onSceneGUI(Camera camera)
     {
         draw(camera, drawn_update_time_, drawn_missile_alive_count_);
-    }    
+    }
 
     public bool checkHitAndClear(int target_id)
     {
@@ -660,7 +689,7 @@ public class MissileManager : MonoBehaviour {
         target_hit_list_[target_id] = 0; // チェックしたらクリアしてしまう
         return hit != 0;
     }
-    
+
     void set_spawn(ref SpawnData spawn, ref Vector3 pos, ref Quaternion rot, int missile_id, int target_id)
     {
         Debug.Assert(target_id >= 0);
@@ -673,28 +702,33 @@ public class MissileManager : MonoBehaviour {
         spawn.random_value_second_ = MyRandom.Range(0f, 1f);
     }
 
-    public void spawn(ref Vector3 pos, ref Quaternion rot, int target_id, double update_time)
+    public void Spawn(Vector3 pos, Quaternion rot, int target_id, double update_time)
     {
-        if (((float)update_time - target_data_[target_id].dead_time_) >= 0f) {
+        if (((float)update_time - m_Missiles[target_id].dead_time_) >= 0f)
+        {
             Debug.Log("no target exists for spawn.");
             return;                // no target exists.
         }
 
         Debug.Assert(missile_status_list_.Length == MISSILE_MAX);
         int idx = -1;
-        for (var i = 0; i < MISSILE_MAX; ++i) {
+        for (var i = 0; i < MISSILE_MAX; ++i)
+        {
             var j = (i + next_spawn_missile_idx_) % MISSILE_MAX;
-            if (missile_status_list_[j] == 0f) {
+            if (missile_status_list_[j] == 0f)
+            {
                 missile_status_list_[j] = 0.1f; // live 6 frames at least.
                 idx = j;
                 break;
             }
         }
-        if (idx < 0) {
+        if (idx < 0)
+        {
             /* Debug.LogError("exceed missiles.."); */
             return;
         }
-        if (spawn_index_ >= spawn_data_.Length) {
+        if (spawn_index_ >= spawn_data_.Length)
+        {
             Debug.LogError("exceed spawn..");
             return;
         }
@@ -704,61 +738,65 @@ public class MissileManager : MonoBehaviour {
     }
 
 
-    public int registTarget(double update_time)
+    public int RegistMissile(double totaleUpdateTime)
     {
-        var id = -1;
-        for (var i = 0; i < target_data_.Length; ++i) {
-            if (update_time - target_data_[i].spawn_time_ < 0) {
-                id = i;
-                target_data_[i].position_ = Vector3.zero;
-                target_data_[i].sqr_radius_ = 0.16f; // 0.4*0.4
-                target_data_[i].dead_time_ = FLOAT_MAX;
-                target_data_[i].spawn_time_ = (float)update_time;
+        int id = -1;
+        for (int iMissile = 0; iMissile < m_Missiles.Length; ++iMissile)
+        {
+            if (totaleUpdateTime - m_Missiles[iMissile].spawn_time_ < 0)
+            {
+                id = iMissile;
+                m_Missiles[iMissile].position_ = Vector3.zero;
+                m_Missiles[iMissile].sqr_radius_ = 0.4f * 0.4f;
+                m_Missiles[iMissile].dead_time_ = FLOAT_MAX;
+                m_Missiles[iMissile].spawn_time_ = (float)totaleUpdateTime;
                 break;
             }
         }
         Debug.Assert(id >= 0);
         return id;
     }
-                
-    public void setTargetRadius(int target_id, float radius)
+
+    public void SetMissileRadius(int missileId, float radius)
     {
-        target_data_[target_id].sqr_radius_ = radius * radius;
+        m_Missiles[missileId].sqr_radius_ = radius * radius;
     }
 
-    public void updateTarget(int target_id, ref Vector3 pos)
+    public void UpdateMissilePosition(int missileId, Vector3 pos)
     {
-        target_data_[target_id].position_ = pos;
+        m_Missiles[missileId].position_ = pos;
     }
 
     public void killTarget(int target_id, double update_time)
     {
-        target_data_[target_id].dead_time_ = (float)update_time;
+        m_Missiles[target_id].dead_time_ = (float)update_time;
     }
 
     public int missileDrawMax { get { return missile_draw_max_; } }
     public void changeMissileDrawMax()
     {
-        missile_draw_max_ += MISSILE_MAX/16;
-        if (missile_draw_max_ > MISSILE_MAX) {
-            missile_draw_max_ = MISSILE_MAX/16;
+        missile_draw_max_ += MISSILE_MAX / 16;
+        if (missile_draw_max_ > MISSILE_MAX)
+        {
+            missile_draw_max_ = MISSILE_MAX / 16;
         }
     }
 
     private void setup_target(float update_time)
     {
-        for (var i = 0; i < target_data_.Length; ++i) {
-            if (update_time - target_data_[i].spawn_time_ > 0) {
-                if ((update_time - target_data_[i].dead_time_) > (MISSILE_ALIVE_PERIOD_AFTER_TARGET_DEATH + 
-                                                                   TRAIL_REMAIN_PERIOD_AFTER_MISSILE_DEATH)) {
+        for (var i = 0; i < m_Missiles.Length; ++i)
+        {
+            if (update_time - m_Missiles[i].spawn_time_ > 0)
+            {
+                if ((update_time - m_Missiles[i].dead_time_) > (MISSILE_ALIVE_PERIOD_AFTER_TARGET_DEATH +
+                                                                   TRAIL_REMAIN_PERIOD_AFTER_MISSILE_DEATH))
+                {
                     // can be reused
-                    target_data_[i].dead_time_ = FLOAT_MAX;
-                    target_data_[i].spawn_time_ = FLOAT_MAX;
+                    m_Missiles[i].dead_time_ = FLOAT_MAX;
+                    m_Missiles[i].spawn_time_ = FLOAT_MAX;
                 }
             }
         }
     }
 
 }
-
-} // namespace UTJ {

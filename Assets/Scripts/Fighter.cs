@@ -1,12 +1,6 @@
-﻿/* -*- mode:CSharp; coding:utf-8-with-signature -*-
- */
-
-using UnityEngine;
+﻿using UnityEngine;
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine.Profiling;
-
-namespace UTJ {
 
 public partial class Fighter : Task
 {
@@ -18,26 +12,30 @@ public partial class Fighter : Task
     public static void createPool()
     {
         pool_ = new Fighter[POOL_MAX];
-        for (var i = 0; i < POOL_MAX; ++i) {
+        for (var i = 0; i < POOL_MAX; ++i)
+        {
             var fighter = new Fighter();
             fighter.fighter_id_ = i;
-            fighter.alive_ = false;
+            fighter.IsAlive = false;
             pool_[i] = fighter;
         }
         pool_index_ = 0;
 
         target_table_ = new int[POOL_MAX];
-        for (var i = 0; i < POOL_MAX; ++i) {
+        for (var i = 0; i < POOL_MAX; ++i)
+        {
             target_table_[i] = -1;
         }
     }
-    
 
-    public enum Type {
+
+    public enum Type
+    {
         None,
         Alpha,
     }
-    private enum Phase {
+    private enum Phase
+    {
         Alive,
         Dying,
     }
@@ -55,17 +53,18 @@ public partial class Fighter : Task
     private delegate void OnRenderUpdateFunc(int front, ref DrawBuffer draw_buffer);
     private OnRenderUpdateFunc on_render_update_;
 
-    public static Fighter create(Type type, ref Vector3 position, ref Quaternion rotation, double update_time)
+    public static Fighter create(Type type, Vector3 position, Quaternion rotation, double update_time)
     {
         Fighter fighter = Fighter.create(update_time);
         fighter.phase_ = Phase.Alive;
-        fighter.init();
-        switch (type) {
+        fighter.Initialize();
+        switch (type)
+        {
             case Type.None:
                 Debug.Assert(false);
                 break;
             case Type.Alpha:
-                fighter.alpha_init(ref position, ref rotation);
+                fighter.alpha_init(position, rotation);
                 break;
         }
         return fighter;
@@ -74,19 +73,21 @@ public partial class Fighter : Task
     private static Fighter create(double update_time)
     {
         int cnt = 0;
-        while (pool_[pool_index_].alive_) {
+        while (pool_[pool_index_].IsAlive)
+        {
             ++pool_index_;
             if (pool_index_ >= POOL_MAX)
                 pool_index_ = 0;
             ++cnt;
-            if (cnt >= POOL_MAX) {
+            if (cnt >= POOL_MAX)
+            {
                 Debug.LogError("EXCEED Fighter POOL!");
                 break;
             }
         }
         var fighter_id = pool_index_;
         var fighter = pool_[fighter_id];
-        int target_id = MissileManager.Instance.registTarget(update_time);
+        int target_id = MissileManager.Instance.RegistMissile(update_time);
         fighter.target_id_ = target_id;
         fighter.target_fighter_ = null;
         target_table_[fighter.target_id_] = fighter_id;
@@ -98,33 +99,36 @@ public partial class Fighter : Task
         position = rigidbody_.transform_.position_;
     }
 
-    public override void destroy()
+    public override void Destroy()
     {
         target_table_[target_id_] = -1;
         MissileManager.Instance.killTarget(target_id_, update_time_);
         enumerator_ = null;
-        base.destroy();
+        base.Destroy();
     }
 
-    public override void update(float dt, double update_time)
+    public override void DoUpdate(float dt, double update_time)
     {
-        if (phase_ == Phase.Dying) {
-            destroy();
+        if (phase_ == Phase.Dying)
+        {
+            Destroy();
             return;
         }
 
         update_time_ = update_time;
-        if (enumerator_ != null) {
+        if (enumerator_ != null)
+        {
             enumerator_.MoveNext();
         }
-        if (alive_) {
+        if (IsAlive)
+        {
             on_update_(dt, update_time);
-            MissileManager.Instance.updateTarget(target_id_,
-                                                 ref rigidbody_.transform_.position_);
+            MissileManager.Instance.UpdateMissilePosition(target_id_,
+                                                 rigidbody_.transform_.position_);
         }
     }
 
-    public override void renderUpdate(int front, CameraBase camera, ref DrawBuffer draw_buffer)
+    public override void DoRenderUpdate(int front, CameraBase camera, ref DrawBuffer draw_buffer)
     {
         on_render_update_(front, ref draw_buffer);
     }
@@ -133,7 +137,8 @@ public partial class Fighter : Task
     public static Fighter searchClosest(ref Vector3 pos, Fighter exclude = null)
     {
         int exclude_fighter_id = -1;
-        if (exclude != null) {
+        if (exclude != null)
+        {
             exclude_fighter_id = exclude.fighter_id_;
         }
         return searchClosest(exclude_fighter_id, ref pos);
@@ -143,15 +148,19 @@ public partial class Fighter : Task
         Profiler.BeginSample("searchClosest");
         Fighter result_fighter = null;
         float max_value = System.Single.MaxValue;
-        for (var i = 0; i < POOL_MAX; ++i) {
-            if (i == exclude_fighter_id) {
+        for (var i = 0; i < POOL_MAX; ++i)
+        {
+            if (i == exclude_fighter_id)
+            {
                 continue;
             }
             Fighter fighter = pool_[i];
-            if (fighter.alive_) {
+            if (fighter.IsAlive)
+            {
                 var diff = fighter.rigidbody_.transform_.position_ - pos;
-                var len2 = diff.x*diff.x + diff.y*diff.y + diff.z*diff.z;
-                if (len2 < max_value) {
+                var len2 = diff.x * diff.x + diff.y * diff.y + diff.z * diff.z;
+                if (len2 < max_value)
+                {
                     result_fighter = fighter;
                     max_value = len2;
                 }
@@ -170,15 +179,19 @@ public partial class Fighter : Task
         Profiler.BeginSample("searchFarest");
         Fighter result_fighter = null;
         float min_value = 0f;
-        for (var i = 0; i < POOL_MAX; ++i) {
-            if (i == exclude_fighter_id) {
+        for (var i = 0; i < POOL_MAX; ++i)
+        {
+            if (i == exclude_fighter_id)
+            {
                 continue;
             }
             Fighter fighter = pool_[i];
-            if (fighter.alive_) {
+            if (fighter.IsAlive)
+            {
                 var diff = fighter.rigidbody_.transform_.position_ - pos;
-                var len2 = diff.x*diff.x + diff.y*diff.y + diff.z*diff.z;
-                if (len2 > min_value) {
+                var len2 = diff.x * diff.x + diff.y * diff.y + diff.z * diff.z;
+                if (len2 > min_value)
+                {
                     result_fighter = fighter;
                     min_value = len2;
                 }
@@ -188,9 +201,3 @@ public partial class Fighter : Task
         return result_fighter;
     }
 }
-
-} // namespace UTJ {
-
-/*
- * End of Fighter.cs
- */

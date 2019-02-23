@@ -3,9 +3,8 @@
 
 using UnityEngine;
 
-namespace UTJ {
-
-public static class Utility {
+public static class Utility
+{
 
     public struct WaitForSeconds
     {
@@ -35,7 +34,7 @@ public static class Utility {
 
     public static Color Lerp3FacttorUnclamped(ref Color a, ref Color b, float t)
     {
-        return new Color(a.r + (b.r - a.r) * t, a.g + (b.g - a.g) * t, a.b + (b.b - a.b) * t, 1f);        
+        return new Color(a.r + (b.r - a.r) * t, a.g + (b.g - a.g) * t, a.b + (b.b - a.b) * t, 1f);
     }
 
     public static string MatrixToString(ref Matrix4x4 mat)
@@ -49,7 +48,7 @@ public static class Utility {
 
     public static void PlaneNormalize(this Vector4 vec)
     {
-        float rlen = 1f/Mathf.Sqrt(vec.x*vec.x + vec.y*vec.y + vec.z*vec.z);
+        float rlen = 1f / Mathf.Sqrt(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z);
         vec.x *= rlen;
         vec.y *= rlen;
         vec.z *= rlen;
@@ -60,7 +59,7 @@ public static class Utility {
     {
         Debug.Assert(planes.Length >= 6);
         int idx = 0;
-        
+
         // left
         planes[idx].x = vp.m30 + vp.m00;
         planes[idx].y = vp.m31 + vp.m01;
@@ -109,20 +108,16 @@ public static class Utility {
 
     public static bool InFrustum(Vector4[] planes, ref Vector3 pos, float radius)
     {
-        for (var i = 0; i < 6; ++i) {
+        for (var i = 0; i < 6; ++i)
+        {
             if (planes[i].x * pos.x +
                 planes[i].y * pos.y +
                 planes[i].z * pos.z +
-                planes[i].w <= -radius) {
+                planes[i].w <= -radius)
+            {
                 return false;
             }
         }
         return true;
     }
 }
-
-} // namespace UTJ {
-
-/*
- * End of Utility.cs
- */

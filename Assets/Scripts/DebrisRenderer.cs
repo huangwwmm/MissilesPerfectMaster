@@ -1,10 +1,4 @@
-﻿/* -*- mode:CSharp; coding:utf-8-with-signature -*-
- */
-
-using UnityEngine;
-using System.Collections;
-
-namespace UTJ {
+﻿using UnityEngine;
 
 [RequireComponent(typeof(MeshFilter),typeof(MeshRenderer))]
 public class DebrisRenderer : MonoBehaviour {
@@ -20,9 +14,3 @@ public class DebrisRenderer : MonoBehaviour {
         mr_.sharedMaterial = Debris.Instance.getMaterial();
     }
 }
-
-} // namespace UTJ {
-
-/*
- * End of DebrisRenderer.cs
- */

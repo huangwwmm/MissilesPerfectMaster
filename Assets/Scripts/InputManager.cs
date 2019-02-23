@@ -1,9 +1,4 @@
-﻿/* -*- mode:CSharp; coding:utf-8-with-signature -*-
- */
-
-using UnityEngine;
-
-namespace UTJ {
+﻿using UnityEngine;
 
 public struct InputBuffer
 {
@@ -21,9 +16,10 @@ public class InputManager
     public static InputManager Instance { get { return instance_ ?? (instance_ = new InputManager()); } }
 
     public const int ONE = 4096;
-    public const float INV_ONE = 1f/((float)ONE);
+    public const float INV_ONE = 1f / ((float)ONE);
 
-    public enum Button {
+    public enum Button
+    {
         Horizontal,
         Vertical,
         Left,
@@ -76,9 +72,12 @@ public class InputManager
         buttons[(int)InputManager.Button.Left] = (Input.GetKey(KeyCode.Z) ? 1 : 0) | (Input.GetButton("Fire3") ? 1 : 0);
         buttons[(int)InputManager.Button.Right] = (Input.GetKey(KeyCode.X) ? 1 : 0) | (Input.GetButton("Fire2") ? 1 : 0);
         bool jump = false;
-        if (Input.GetKey(KeyCode.RightArrow) && Input.GetKey(KeyCode.LeftArrow)) {
+        if (Input.GetKey(KeyCode.RightArrow) && Input.GetKey(KeyCode.LeftArrow))
+        {
             jump = true;
-        } else if (Input.GetKey(KeyCode.A) && Input.GetKey(KeyCode.D)) {
+        }
+        else if (Input.GetKey(KeyCode.A) && Input.GetKey(KeyCode.D))
+        {
             jump = true;
         }
         buttons[(int)InputManager.Button.Jump] = (int)(jump ? 1 : 0);
@@ -91,16 +90,19 @@ public class InputManager
     private void set_flick()
     {
         bool treated = false;
-        if (Input.touchCount > 0 && Input.GetTouch(0).phase == TouchPhase.Moved) {
+        if (Input.touchCount > 0 && Input.GetTouch(0).phase == TouchPhase.Moved)
+        {
             var diff = Input.GetTouch(0).deltaPosition;
             input_buffer_.flick_vector_.x = diff.x / (float)Screen.height;
             input_buffer_.flick_vector_.y = diff.y / (float)Screen.height;
             treated = true;
         }
-        if (Input.GetMouseButtonDown(0)) {
+        if (Input.GetMouseButtonDown(0))
+        {
             prev_mouse_position_ = Input.mousePosition;
         }
-        if (Input.GetMouseButton(0)) {
+        if (Input.GetMouseButton(0))
+        {
             Vector2 pos = Input.mousePosition;
             Vector2 diff = pos - prev_mouse_position_;
             input_buffer_.flick_vector_.x = diff.x / (float)Screen.height;
@@ -108,7 +110,8 @@ public class InputManager
             prev_mouse_position_ = pos;
             treated = true;
         }
-        if (!treated) {
+        if (!treated)
+        {
             input_buffer_.flick_vector_.x = 0f;
             input_buffer_.flick_vector_.y = 0f;
         }
@@ -122,29 +125,27 @@ public class InputManager
         bool clicked1 = false;
         var clicked_position0 = new Vector2(0f, 0f);
         var clicked_position1 = new Vector2(0f, 0f);
-        if (Input.touchCount > 0) {
+        if (Input.touchCount > 0)
+        {
             clicked_position0 = Input.GetTouch(0).position;
             clicked0 = true;
-            if (Input.touchCount > 1) {
+            if (Input.touchCount > 1)
+            {
                 clicked_position1 = Input.GetTouch(1).position;
                 clicked1 = true;
             }
-        } else if (Input.GetMouseButton(0)) {
+        }
+        else if (Input.GetMouseButton(0))
+        {
             clicked_position0 = Input.mousePosition;
             clicked0 = true;
         }
-        clicked_position0.x -= Screen.width*0.5f;
-        clicked_position0.y -= Screen.height*0.5f;
-        clicked_position1.x -= Screen.width*0.5f;
-        clicked_position1.y -= Screen.height*0.5f;
+        clicked_position0.x -= Screen.width * 0.5f;
+        clicked_position0.y -= Screen.height * 0.5f;
+        clicked_position1.x -= Screen.width * 0.5f;
+        clicked_position1.y -= Screen.height * 0.5f;
         set_touched(clicked0, ref clicked_position0, 0 /* index */);
         set_touched(clicked1, ref clicked_position1, 1 /* index */);
         set_flick();
     }
 }
-
-} // namespace UTJ {
-
-/*
- * End of InputManager.cs
- */

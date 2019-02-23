@@ -1,9 +1,4 @@
-﻿/* -*- mode:CSharp; coding:utf-8-with-signature -*-
- */
-
-using UnityEngine;
-
-namespace UTJ {
+﻿using UnityEngine;
 
 public struct DrawBuffer
 {
@@ -77,17 +72,19 @@ public struct DrawBuffer
     public void init()
     {
         object_buffer_ = new DrawBuffer.ObjectBuffer[OBJECT_MAX];
-        for (int i = 0; i < OBJECT_MAX; ++i) {
+        for (int i = 0; i < OBJECT_MAX; ++i)
+        {
             object_buffer_[i].init();
         }
         object_num_ = 0;
 
         se_ = new SE[SystemManager.AUDIO_CHANNEL_MAX];
-        for (var i = 0; i < SystemManager.AUDIO_CHANNEL_MAX; ++i) {
+        for (var i = 0; i < SystemManager.AUDIO_CHANNEL_MAX; ++i)
+        {
             se_[i] = SE.None;
         }
         audio_idx_ = 0;
-        
+
         bgm_ = BGM.Keep;
     }
 
@@ -105,7 +102,8 @@ public struct DrawBuffer
     {
         object_buffer_[object_num_].set(ref transform, type, versatile_data);
         ++object_num_;
-        if (object_num_ > OBJECT_MAX) {
+        if (object_num_ > OBJECT_MAX)
+        {
             Debug.LogError("EXCEED Fighter POOL!");
             Debug.Assert(false);
         }
@@ -115,7 +113,8 @@ public struct DrawBuffer
     {
         object_buffer_[object_num_].set(ref position, ref rotation, type, versatile_data);
         ++object_num_;
-        if (object_num_ > OBJECT_MAX) {
+        if (object_num_ > OBJECT_MAX)
+        {
             Debug.LogError("EXCEED Fighter POOL!");
             Debug.Assert(false);
         }
@@ -128,7 +127,8 @@ public struct DrawBuffer
 
     public void registSound(SE se)
     {
-        if (audio_idx_ >= SystemManager.AUDIO_CHANNEL_MAX) {
+        if (audio_idx_ >= SystemManager.AUDIO_CHANNEL_MAX)
+        {
             Debug.Log("max audio channel is used.");
             return;
         }
@@ -146,9 +146,3 @@ public struct DrawBuffer
         motion_ = motion;
     }
 }
-
-} // namespace UTJ {
-
-/*
- * End of DrawBuffer.cs
- */

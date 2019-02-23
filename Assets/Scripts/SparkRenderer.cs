@@ -1,13 +1,8 @@
-﻿/* -*- mode:CSharp; coding:utf-8-with-signature -*-
- */
+﻿using UnityEngine;
 
-using UnityEngine;
-using System.Collections;
-
-namespace UTJ {
-
-[RequireComponent(typeof(MeshFilter),typeof(MeshRenderer))]
-public class SparkRenderer : MonoBehaviour {
+[RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
+public class SparkRenderer : MonoBehaviour
+{
 
     private MeshFilter mf_;
     private MeshRenderer mr_;
@@ -21,9 +16,3 @@ public class SparkRenderer : MonoBehaviour {
         mr_.SetPropertyBlock(Spark.Instance.getMaterialPropertyBlock());
     }
 }
-
-} // namespace UTJ {
-
-/*
- * End of SparkRenderer.cs
- */

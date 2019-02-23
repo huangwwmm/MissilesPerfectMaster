@@ -1,34 +1,34 @@
-﻿/* -*- mode:CSharp; coding:utf-8-with-signature -*-
- */
-
-using UnityEngine;
-
-namespace UTJ {
-
-public abstract class Task
+﻿public abstract class Task
 {
-    public Task prev_;
-    public Task next_;
-    public bool alive_;
-    public abstract void update(float dt, double update_time);
-    public abstract void renderUpdate(int front, CameraBase camera, ref DrawBuffer draw_buffer);
+    public bool IsAlive;
 
-    public virtual void init()
+    /// <summary>
+    /// 仅用于TaskManager
+    /// </summary>
+    internal Task _PrevTask;
+    /// <summary>
+    /// 仅用于TaskManager
+    /// </summary>
+    internal Task _NextTask;
+
+    public virtual void Initialize()
     {
-        alive_ = true;
-        TaskManager.Instance.add(this);
+        IsAlive = true;
+        TaskManager.GetInstance().Add(this);
     }
 
-    public virtual void destroy()
+    public virtual void Destroy()
     {
-        TaskManager.Instance.remove(this);
-        alive_ = false;
-        /* don't touch next_ and prev_ here! */
+        TaskManager.GetInstance().Remove(this);
+        IsAlive = false;
     }
+
+    /// <summary>
+    /// 在<see cref="DoRendererUpdate"/>前执行
+    /// </summary>
+    /// <param name="deltaTime">当前帧的时间</param>
+    /// <param name="totalUpdateTime">累计的Update时间（非真实时间），不包括当前帧</param>
+    public abstract void DoUpdate(float deltaTime, double totalUpdateTime);
+
+    public abstract void DoRenderUpdate(int front, CameraBase camera, ref DrawBuffer drawBuffer);
 }
-
-} // namespace UTJ {
-
-/*
- * End of Task.cs
- */

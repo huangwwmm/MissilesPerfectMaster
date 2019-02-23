@@ -1,9 +1,4 @@
-﻿/* -*- mode:CSharp; coding:utf-8-with-signature -*-
- */
-
-using UnityEngine;
-
-namespace UTJ {
+﻿using UnityEngine;
 
 public abstract class CameraBase : Task
 {
@@ -12,9 +7,9 @@ public abstract class CameraBase : Task
     public MyTransform transform_;
     private Matrix4x4 screen_matrix_;
 
-    public override void init()
+    public override void Initialize()
     {
-        base.init();
+        base.Initialize();
         transform_.init();
         active_ = true;
     }
@@ -25,9 +20,10 @@ public abstract class CameraBase : Task
         transform_.rotation_ = rot;
     }
 
-    public override void renderUpdate(int front, CameraBase dummy, ref DrawBuffer draw_buffer)
+    public override void DoRenderUpdate(int front, CameraBase dummy, ref DrawBuffer draw_buffer)
     {
-        if (active_) {
+        if (active_)
+        {
             draw_buffer.registCamera(ref transform_);
             var view_matrix = transform_.getTRS();
             var projection_matrix = SystemManager.Instance.ProjectionMatrix;
@@ -38,14 +34,8 @@ public abstract class CameraBase : Task
     public Vector3 getScreenPoint(ref Vector3 world_position)
     {
         var v = screen_matrix_.MultiplyPoint(world_position);
-        float w = SCREEN_HEIGHT*((float)Screen.width/(float)Screen.height);
+        float w = SCREEN_HEIGHT * ((float)Screen.width / (float)Screen.height);
         float h = SCREEN_HEIGHT;
         return new Vector3(v.x * (-w), v.y * (-h), v.z);
     }
 }
-
-} // namespace UTJ {
-
-/*
- * End of CameraBase.cs
- */

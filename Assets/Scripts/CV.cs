@@ -1,12 +1,7 @@
-﻿/* -*- mode:CSharp; coding:utf-8-with-signature -*-
- */
+﻿using UnityEngine;
 
-using UnityEngine;
-using System.Collections;
-
-namespace UTJ {
-
-class CV {
+public class CV
+{
     public static Vector3 Vector3Zero = Vector3.zero;
     public static Vector3 Vector3One = Vector3.one;
     public static Vector3 Vector3Forward = Vector3.forward;
@@ -22,9 +17,3 @@ class CV {
     public static Vector2[] Vector2ArrayEmpty = new Vector2[0];
     public static int[] IntArrayEmpty = new int[0];
 }
-
-} // namespace UTJ {
-
-/*
- * End of CV.cs
- */
