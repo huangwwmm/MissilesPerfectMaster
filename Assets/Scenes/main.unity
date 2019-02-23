@@ -1692,23 +1692,23 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 90c4ed15ef9c44251af83a8add5a3915, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  debug_mode_: 0
-  final_material_: {fileID: 2100000, guid: 29469f4d7b2654e8fa20bffc69be0ed0, type: 2}
-  spark_material_: {fileID: 2100000, guid: c13d63ff90bd74121af3c07300fd5957, type: 2}
-  debris_material_: {fileID: 2100000, guid: c4811bc2bcdfd4afd8d26a47b87ce663, type: 2}
-  sprites_:
-  - {fileID: 21300000, guid: 48030df7726f24883a3ac3fc884d50f1, type: 3}
-  sprite_material_: {fileID: 2100000, guid: 5f69a85ebe2424be2996a83edba6208b, type: 2}
-  font_: {fileID: 12800000, guid: cb81b2d85fe5e4099ba6d279a35ba61f, type: 2}
-  font_material_: {fileID: 2100000, guid: 563aa9f128f84474ca29e41546b8d089, type: 2}
-  fighter_alpha_mesh_: {fileID: 4300000, guid: 6e736a64a371646c3b89ab717055723e, type: 3}
-  fighter_alpha_material_: {fileID: 2100000, guid: d721a88e73d1e4a94b1ba801445d2a39,
+  m_DebugMode: 0
+  m_FinalMaterial: {fileID: 2100000, guid: 29469f4d7b2654e8fa20bffc69be0ed0, type: 2}
+  m_SparkMaterial: {fileID: 2100000, guid: c13d63ff90bd74121af3c07300fd5957, type: 2}
+  m_DebrisMaterial: {fileID: 2100000, guid: c4811bc2bcdfd4afd8d26a47b87ce663, type: 2}
+  m_Sprites:
+  - {fileID: 21300000, guid: 1e4175ba047324edaa7d991ce59f3af5, type: 3}
+  m_SpriteMaterial: {fileID: 2100000, guid: 5f69a85ebe2424be2996a83edba6208b, type: 2}
+  m_Font: {fileID: 12800000, guid: cb81b2d85fe5e4099ba6d279a35ba61f, type: 2}
+  m_FontMaterial: {fileID: 2100000, guid: 563aa9f128f84474ca29e41546b8d089, type: 2}
+  m_FighterAlphaMesh: {fileID: 4300000, guid: 6e736a64a371646c3b89ab717055723e, type: 3}
+  m_FighterAlphaMaterial: {fileID: 2100000, guid: d721a88e73d1e4a94b1ba801445d2a39,
     type: 2}
-  alpha_burner_mesh_: {fileID: 4300000, guid: cc6868a570d304a9987b8e752ba43a26, type: 3}
-  alpha_burner_material_: {fileID: 2100000, guid: 5591b78a38e664a98bd5cd983b69c1a1,
+  m_AlphaBurnerMesh: {fileID: 4300000, guid: cc6868a570d304a9987b8e752ba43a26, type: 3}
+  m_AlphaBurnerMaterial: {fileID: 2100000, guid: 5591b78a38e664a98bd5cd983b69c1a1,
     type: 2}
-  se_explosion_: {fileID: 8300000, guid: a5f6f09ee30aa4b96bd627e943694fa5, type: 3}
-  se_laser_: {fileID: 8300000, guid: 29942fdf707f74367ae98f987852fe14, type: 3}
+  m_ExplosionAudio: {fileID: 8300000, guid: a5f6f09ee30aa4b96bd627e943694fa5, type: 3}
+  m_LaserAudio: {fileID: 8300000, guid: 29942fdf707f74367ae98f987852fe14, type: 3}
 --- !u!4 &2090417139
 Transform:
   m_ObjectHideFlags: 0

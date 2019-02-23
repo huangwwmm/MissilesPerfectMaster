@@ -26,7 +26,7 @@ public abstract class CameraBase : Task
         {
             draw_buffer.registCamera(ref transform_);
             var view_matrix = transform_.getTRS();
-            var projection_matrix = SystemManager.Instance.ProjectionMatrix;
+            var projection_matrix = SystemManager.GetInstance().GetProjectionMatrix();
             screen_matrix_ = projection_matrix * view_matrix.inverse;
         }
     }

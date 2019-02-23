@@ -417,7 +417,7 @@ public class MissileManager : MonoBehaviour
 #endif
     }
 
-    public void finalize()
+    public void Release()
     {
         // release compute buffers
         cbuffer_explosion_drawindirect_args_.Release();
@@ -655,7 +655,7 @@ public class MissileManager : MonoBehaviour
             int max_vol = check_missile_result(dt);
             if (max_vol > 240)
             {
-                SystemManager.Instance.registSound(DrawBuffer.SE.Explosion); // 爆発音
+                SystemManager.GetInstance().RegistSound(DrawBuffer.SE.Explosion); // 爆発音
             }
         }
 
@@ -678,7 +678,7 @@ public class MissileManager : MonoBehaviour
         }
     }
 
-    public void onSceneGUI(Camera camera)
+    public void OnSceneGUI(Camera camera)
     {
         draw(camera, drawn_update_time_, drawn_missile_alive_count_);
     }

@@ -7,7 +7,7 @@ public class GameManager
 
     private static GameManager ms_Instance;
 
-    private IEnumerator m_Enumerator;
+    private IEnumerator m_DoUpdateEnumerator;
     /// <summary>
     /// Cahce这个变量是为了在Ienumerator中使用
     /// </summary>
@@ -20,13 +20,13 @@ public class GameManager
 
     public void Initialize(bool debug)
     {
-        m_Enumerator = debug ? DEBUG_DoUpdate_Co() : DoUpdate_Co();
+        m_DoUpdateEnumerator = debug ? DEBUG_DoUpdate_Co() : DoUpdate_Co();
     }
 
     public void DoUpdate(float dt, double totalUpdateTime)
     {
         m_TotalUpdateTime = totalUpdateTime;
-        m_Enumerator.MoveNext();
+        m_DoUpdateEnumerator.MoveNext();
     }
 
     /// <summary>
@@ -66,9 +66,9 @@ public class GameManager
                 , Quaternion.Euler(0f, -30f, 0f)
                 , missileId, m_TotalUpdateTime);
 
-            for (var i = new Utility.WaitForSeconds(2f, m_TotalUpdateTime); !i.end(m_TotalUpdateTime);)
+            for (Utility.WaitForSeconds waitForSeconds = new Utility.WaitForSeconds(2f, m_TotalUpdateTime); !waitForSeconds.end(m_TotalUpdateTime);)
             {
-                var pos = new Vector3(100f, 0f, 10f);
+                Vector3 pos = new Vector3(100f, 0f, 10f);
                 MissileManager.Instance.UpdateMissilePosition(missileId, pos);
                 MissileManager.Instance.checkHitAndClear(missileId);
                 yield return null;

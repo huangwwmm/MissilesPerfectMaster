@@ -2,197 +2,181 @@
 
 public class SystemManager : MonoBehaviour
 {
+    public const int AUDIO_CHANNEL_MAX = 4;
+    private const int DEFAULT_FPS = 60;
+    private const float RENDER_FPS = 60f;
+    private const float RENDER_DT = 1f / RENDER_FPS;
+    private const int AUDIOSOURCE_EXPLOSION_MAX = 8;
+    private const int AUDIOSOURCE_LASER_MAX = 4;
+    private const int ALPHA_MAX = 128;
+    private static readonly int SHADER_PROPERTYID_CURRENT_TIME = Shader.PropertyToID("_CurrentTime");
 
-    // singleton
-    static SystemManager instance_;
-    public static SystemManager Instance { get { return instance_ ?? (instance_ = GameObject.Find("system_manager").GetComponent<SystemManager>()); } }
+    private static SystemManager ms_Instance;
 
-    static readonly int shader_CurrentTime = Shader.PropertyToID("_CurrentTime");
+    [SerializeField]
+    private bool m_DebugMode;
+    [SerializeField]
+    private Material m_FinalMaterial;
+    [SerializeField]
+    private Material m_SparkMaterial;
+    [SerializeField]
+    private Material m_DebrisMaterial;
+    [SerializeField]
+    private Sprite[] m_Sprites;
+    [SerializeField]
+    private Material m_SpriteMaterial;
+    [SerializeField]
+    private Font m_Font;
+    [SerializeField]
+    private Material m_FontMaterial;
+    [SerializeField]
+    private Mesh m_FighterAlphaMesh;
+    [SerializeField]
+    private Material m_FighterAlphaMaterial;
+    [SerializeField]
+    private Mesh m_AlphaBurnerMesh;
+    [SerializeField]
+    private Material m_AlphaBurnerMaterial;
+    [SerializeField]
+    private AudioClip m_ExplosionAudio;
+    [SerializeField]
+    private AudioClip m_LaserAudio;
 
-    [SerializeField] bool debug_mode_;
-    [SerializeField] Material final_material_;
-    [SerializeField] Material spark_material_;
-    [SerializeField] Material debris_material_;
-    [SerializeField] Sprite[] sprites_;
-    [SerializeField] Material sprite_material_;
-    [SerializeField] Font font_;
-    [SerializeField] Material font_material_;
-    [SerializeField] Mesh fighter_alpha_mesh_;
-    [SerializeField] Material fighter_alpha_material_;
-    [SerializeField] Mesh alpha_burner_mesh_;
-    [SerializeField] Material alpha_burner_material_;
-    Matrix4x4[] alpha_matrices_;
-    const int ALPHA_MAX = 128;
-    Vector4[] frustum_planes_;
+    private Matrix4x4[] m_AlphaMatrices;
+    private Vector4[] m_FrustumPlanes;
+    private Camera m_Camera;
+    private GameObject m_CameraFinalHolder;
+    private Camera m_CameraFinal;
+    private RenderTexture m_RenderTexture;
+    private Matrix4x4 m_ProjectionMatrix;
+    private bool m_MeterDraw;
+    private System.Diagnostics.Stopwatch m_Stopwatch;
+    private int m_RenderingFront;
+    private DrawBuffer[] m_DrawBuffer;
+    private float m_DeltaTime;
+    private DebugCamera m_DebugCamera;
+    private SpectatorCamera m_SpectatorCamera;
+    private long m_UpdateFrame;
+    private long m_RenderFrame;
+    private long m_RenderSyncFrame;
+    private double m_TotalUpdateTime;
+    private AudioSource[] m_AudioSourcesExplosion;
+    private int m_AudioSourceExplosionIndex;
+    private AudioSource[] m_AudioSourcesLaser;
+    private int m_AudioSourceLaserIndex;
+    private bool m_SpectatorMode;
+    private bool m_IsInitialized = false;
 
-    Camera camera_;
-    GameObject camera_final_holder_;
-    Camera camera_final_;
-    RenderTexture render_texture_;
-    public Matrix4x4 ProjectionMatrix { get; set; }
-
-    bool meter_draw_;
-
-    const int DefaultFps = 60;
-    const float RENDER_FPS = 60f;
-    const float RENDER_DT = 1f / RENDER_FPS;
-    public System.Diagnostics.Stopwatch stopwatch_;
-    int rendering_front_;
-    public int getRenderingFront() { return rendering_front_; }
-    DrawBuffer[] draw_buffer_;
-    float dt_;
-    public void setFPS(int fps)
+    public static SystemManager GetInstance()
     {
-        dt_ = 1f / (float)fps;
+        return ms_Instance ?? (ms_Instance = GameObject.Find("system_manager").GetComponent<SystemManager>());
     }
-    public int getFPS()
+
+    public void SetFPS(int fps)
     {
-        if (dt_ <= 0f)
+        m_DeltaTime = 1f / (float)fps;
+    }
+
+    public int GetFPS()
+    {
+        if (m_DeltaTime <= 0f)
         {
             return 0;
         }
         else
         {
-            return (int)(1f / dt_ + 0.5f);
+            return (int)(1f / m_DeltaTime + 0.5f);
         }
     }
 
-    DebugCamera debug_camera_;
-    SpectatorCamera spectator_camera_;
-
-    long update_frame_;
-    long render_frame_;
-    long render_sync_frame_;
-    double update_time_;
-    bool pause_;
-
-    // audio
-    public const int AUDIO_CHANNEL_MAX = 4;
-
-    const int AUDIOSOURCE_EXPLOSION_MAX = 8;
-    AudioSource[] audio_sources_explosion_;
-    int audio_source_explosion_index_;
-    public AudioClip se_explosion_;
-
-    const int AUDIOSOURCE_LASER_MAX = 4;
-    AudioSource[] audio_sources_laser_;
-    int audio_source_laser_index_;
-    public AudioClip se_laser_;
-
-    bool spectator_mode_;
-    bool initialized_ = false;
-
-    void OnApplicationQuit()
+    public Matrix4x4 GetProjectionMatrix()
     {
-        final_material_.mainTexture = null; // suppress error-messages on console.
+        return m_ProjectionMatrix;
     }
 
-    void OnEnable()
+    private void SetCamera()
     {
-#if UNITY_EDITOR
-        UnityEditor.SceneView.onSceneGUIDelegate -= OnSceneGUI;
-        UnityEditor.SceneView.onSceneGUIDelegate += OnSceneGUI;
-#endif
-    }
-
-    void Start()
-    {
-        instance_ = GameObject.Find("system_manager").GetComponent<SystemManager>(); ;
-        initialize();
-    }
-
-    void OnDisable()
-    {
-        finalize();
-#if UNITY_EDITOR
-        UnityEditor.SceneView.onSceneGUIDelegate -= OnSceneGUI;
-#endif
-    }
-
-    void set_camera()
-    {
-        if (!spectator_mode_)
+        if (!m_SpectatorMode)
         {
-            debug_camera_.setup(spectator_camera_);
+            m_DebugCamera.setup(m_SpectatorCamera);
         }
-        debug_camera_.active_ = !spectator_mode_;
-        spectator_camera_.active_ = spectator_mode_;
+        m_DebugCamera.active_ = !m_SpectatorMode;
+        m_SpectatorCamera.active_ = m_SpectatorMode;
     }
 
-    void initialize()
+    private void Initialize()
     {
         MyRandom.SetSeed(12345L);
-        camera_final_ = GameObject.Find("FinalCamera").GetComponent<Camera>();
-        camera_final_.enabled = false;
+        m_CameraFinal = GameObject.Find("FinalCamera").GetComponent<Camera>();
+        m_CameraFinal.enabled = false;
         if ((float)Screen.width / (float)Screen.height < 16f / 9f)
         {
-            var size = camera_final_.orthographicSize * ((16f / 9f) * ((float)Screen.height / (float)Screen.width));
-            camera_final_.orthographicSize = size;
+            var size = m_CameraFinal.orthographicSize * ((16f / 9f) * ((float)Screen.height / (float)Screen.width));
+            m_CameraFinal.orthographicSize = size;
         }
-        meter_draw_ = true;
+        m_MeterDraw = true;
 
         Application.targetFrameRate = (int)RENDER_FPS; // necessary for iOS because the default is 30fps.
         // QualitySettings.vSyncCount = 1;
 
-        stopwatch_ = new System.Diagnostics.Stopwatch();
-        stopwatch_.Start();
-        rendering_front_ = 0;
+        m_Stopwatch = new System.Diagnostics.Stopwatch();
+        m_Stopwatch.Start();
+        m_RenderingFront = 0;
 
-        setFPS(DefaultFps);
-        update_frame_ = 0;
-        update_time_ = 100.0;    // ゼロクリア状態を過去のものにするため増やしておく
-        render_frame_ = 0;
-        render_sync_frame_ = 0;
-        pause_ = false;
-        spectator_mode_ = true;
+        SetFPS(DEFAULT_FPS);
+        m_UpdateFrame = 0;
+        m_TotalUpdateTime = 100.0;    // ゼロクリア状態を過去のものにするため増やしておく
+        m_RenderFrame = 0;
+        m_RenderSyncFrame = 0;
+        m_SpectatorMode = true;
 
-        camera_ = GameObject.Find("Main Camera").GetComponent<Camera>();
-        ProjectionMatrix = camera_.projectionMatrix;
+        m_Camera = GameObject.Find("Main Camera").GetComponent<Camera>();
+        m_ProjectionMatrix = m_Camera.projectionMatrix;
 
-        MissileManager.Instance.initialize(camera_);
+        MissileManager.Instance.initialize(m_Camera);
         InputManager.Instance.init();
         Controller.Instance.init(false /* auto */);
         TaskManager.GetInstance().Initialize();
         Fighter.createPool();
-        Spark.Instance.init(spark_material_);
-        Debris.Instance.init(debris_material_);
-        MySprite.Instance.init(sprites_, sprite_material_);
-        MySpriteRenderer.Instance.init(camera_);
-        MyFont.Instance.init(font_, font_material_);
+        Spark.Instance.init(m_SparkMaterial);
+        Debris.Instance.init(m_DebrisMaterial);
+        MySprite.Instance.init(m_Sprites, m_SpriteMaterial);
+        MySpriteRenderer.Instance.init(m_Camera);
+        MyFont.Instance.init(m_Font, m_FontMaterial);
         MyFontRenderer.Instance.init();
 
         PerformanceMeter.Instance.init();
 
-        draw_buffer_ = new DrawBuffer[2];
+        m_DrawBuffer = new DrawBuffer[2];
         for (int i = 0; i < 2; ++i)
         {
-            draw_buffer_[i].init();
+            m_DrawBuffer[i].init();
         }
 
-        debug_camera_ = DebugCamera.create();
-        spectator_camera_ = SpectatorCamera.create();
-        set_camera();
+        m_DebugCamera = DebugCamera.create();
+        m_SpectatorCamera = SpectatorCamera.create();
+        SetCamera();
 
         // audio
-        audio_sources_explosion_ = new AudioSource[AUDIOSOURCE_EXPLOSION_MAX];
+        m_AudioSourcesExplosion = new AudioSource[AUDIOSOURCE_EXPLOSION_MAX];
         for (var i = 0; i < AUDIOSOURCE_EXPLOSION_MAX; ++i)
         {
-            audio_sources_explosion_[i] = gameObject.AddComponent<AudioSource>();
-            audio_sources_explosion_[i].clip = se_explosion_;
-            audio_sources_explosion_[i].volume = 0.01f;
-            audio_sources_explosion_[i].pitch = 0.25f;
+            m_AudioSourcesExplosion[i] = gameObject.AddComponent<AudioSource>();
+            m_AudioSourcesExplosion[i].clip = m_ExplosionAudio;
+            m_AudioSourcesExplosion[i].volume = 0.01f;
+            m_AudioSourcesExplosion[i].pitch = 0.25f;
         }
-        audio_source_explosion_index_ = 0;
-        audio_sources_laser_ = new AudioSource[AUDIOSOURCE_LASER_MAX];
+        m_AudioSourceExplosionIndex = 0;
+        m_AudioSourcesLaser = new AudioSource[AUDIOSOURCE_LASER_MAX];
         for (var i = 0; i < AUDIOSOURCE_LASER_MAX; ++i)
         {
-            audio_sources_laser_[i] = gameObject.AddComponent<AudioSource>();
-            audio_sources_laser_[i].clip = se_laser_;
-            audio_sources_laser_[i].volume = 0.025f;
+            m_AudioSourcesLaser[i] = gameObject.AddComponent<AudioSource>();
+            m_AudioSourcesLaser[i].clip = m_LaserAudio;
+            m_AudioSourcesLaser[i].volume = 0.025f;
         }
-        audio_source_laser_index_ = 0;
+        m_AudioSourceLaserIndex = 0;
 
-        GameManager.GetInstance().Initialize(debug_mode_);
+        GameManager.GetInstance().Initialize(m_DebugMode);
 
 #if UNITY_PS4 || UNITY_EDITOR || UNITY_STANDALONE_WIN || UNITY_STANDALONE_OSX
         int rw = 1920;
@@ -201,58 +185,49 @@ public class SystemManager : MonoBehaviour
         int rw = 1024;
         int rh = 576;
 #endif
-        render_texture_ = new RenderTexture(rw, rh, 24 /* depth */, RenderTextureFormat.ARGB32);
-        render_texture_.Create();
-        camera_.targetTexture = render_texture_;
-        final_material_.mainTexture = render_texture_;
-        alpha_matrices_ = new Matrix4x4[ALPHA_MAX];
-        frustum_planes_ = new Vector4[6];
+        m_RenderTexture = new RenderTexture(rw, rh, 24 /* depth */, RenderTextureFormat.ARGB32);
+        m_RenderTexture.Create();
+        m_Camera.targetTexture = m_RenderTexture;
+        m_FinalMaterial.mainTexture = m_RenderTexture;
+        m_AlphaMatrices = new Matrix4x4[ALPHA_MAX];
+        m_FrustumPlanes = new Vector4[6];
 
-        initialized_ = true;
-        camera_final_.enabled = true;
+        m_IsInitialized = true;
+        m_CameraFinal.enabled = true;
     }
 
-    void finalize()
+    private int GetFront()
     {
-        MissileManager.Instance.finalize();
-    }
-
-    int get_front()
-    {
-        int updating_front = rendering_front_;            // don't flip
+        int updating_front = m_RenderingFront;            // don't flip
         return updating_front;
     }
 
-    void main_loop()
+    private void MainLoop()
     {
         PerformanceMeter.Instance.beginUpdate();
-        int updating_front = get_front();
+        int updating_front = GetFront();
 
         // fetch
-        Controller.Instance.fetch(update_time_);
+        Controller.Instance.fetch(m_TotalUpdateTime);
         var controller = Controller.Instance.getLatest();
 
         // update
-        float dt = dt_;
-        if (pause_)
-        {
-            dt = 0f;
-        }
-        spectator_camera_.rotateOffsetRotation(-controller.flick_y_, controller.flick_x_);
+        float dt = m_DeltaTime;
+        m_SpectatorCamera.rotateOffsetRotation(-controller.flick_y_, controller.flick_x_);
         UnityEngine.Profiling.Profiler.BeginSample("Task update");
-        GameManager.GetInstance().DoUpdate(dt, update_time_);
-        TaskManager.GetInstance().DoUpdate(dt, update_time_);
+        GameManager.GetInstance().DoUpdate(dt, m_TotalUpdateTime);
+        TaskManager.GetInstance().DoUpdate(dt, m_TotalUpdateTime);
         UnityEngine.Profiling.Profiler.EndSample();
-        ++update_frame_;
-        update_time_ += dt;
+        ++m_UpdateFrame;
+        m_TotalUpdateTime += dt;
 
         UnityEngine.Profiling.Profiler.BeginSample("MissileManager.update");
-        MissileManager.Instance.update(dt, update_time_);
+        MissileManager.Instance.update(dt, m_TotalUpdateTime);
         UnityEngine.Profiling.Profiler.EndSample();
         PerformanceMeter.Instance.endUpdate();
 
         PerformanceMeter.Instance.beginRenderUpdate();
-        CameraBase current_camera = spectator_mode_ ? spectator_camera_ as CameraBase : debug_camera_ as CameraBase;
+        CameraBase current_camera = m_SpectatorMode ? m_SpectatorCamera as CameraBase : m_DebugCamera as CameraBase;
         // begin
         UnityEngine.Profiling.Profiler.BeginSample("renderUpdate_begin");
         MySprite.Instance.begin();
@@ -262,15 +237,15 @@ public class SystemManager : MonoBehaviour
 
         // renderUpdate
         UnityEngine.Profiling.Profiler.BeginSample("renderUpdate");
-        draw_buffer_[updating_front].beginRender();
+        m_DrawBuffer[updating_front].beginRender();
         TaskManager.GetInstance().DoRendererUpdate(updating_front,
                                           current_camera,
-                                          ref draw_buffer_[updating_front]);
-        draw_buffer_[updating_front].endRender();
+                                          ref m_DrawBuffer[updating_front]);
+        m_DrawBuffer[updating_front].endRender();
         UnityEngine.Profiling.Profiler.EndSample();
 
         // performance meter
-        if (meter_draw_)
+        if (m_MeterDraw)
         {
             PerformanceMeter.Instance.drawMeters(updating_front);
         }
@@ -285,22 +260,20 @@ public class SystemManager : MonoBehaviour
         PerformanceMeter.Instance.endRenderUpdate();
     }
 
-    public float realtimeSinceStartup { get { return ((float)stopwatch_.ElapsedTicks) / (float)System.Diagnostics.Stopwatch.Frequency; } }
-
-    public void registSound(DrawBuffer.SE se)
+    public void RegistSound(DrawBuffer.SE se)
     {
-        int front = get_front();
-        draw_buffer_[front].registSound(se);
+        int front = GetFront();
+        m_DrawBuffer[front].registSound(se);
     }
 
-    void render(ref DrawBuffer draw_buffer)
+    private void Render(ref DrawBuffer draw_buffer)
     {
         // camera
-        camera_.transform.position = draw_buffer.camera_transform_.position_;
-        camera_.transform.rotation = draw_buffer.camera_transform_.rotation_;
-        camera_.enabled = true;
-        var vp = camera_.projectionMatrix * camera_.worldToCameraMatrix;
-        Utility.GetPlanesFromFrustum(frustum_planes_, ref vp);
+        m_Camera.transform.position = draw_buffer.camera_transform_.position_;
+        m_Camera.transform.rotation = draw_buffer.camera_transform_.rotation_;
+        m_Camera.enabled = true;
+        var vp = m_Camera.projectionMatrix * m_Camera.worldToCameraMatrix;
+        Utility.GetPlanesFromFrustum(m_FrustumPlanes, ref vp);
 
         int alpha_count = 0;
         for (var i = 0; i < draw_buffer.object_num_; ++i)
@@ -313,29 +286,29 @@ public class SystemManager : MonoBehaviour
                 case DrawBuffer.Type.Empty:
                     break;
                 case DrawBuffer.Type.FighterAlpha:
-                    if (Utility.InFrustum(frustum_planes_,
+                    if (Utility.InFrustum(m_FrustumPlanes,
                                           ref draw_buffer.object_buffer_[i].transform_.position_,
                                           2f /* radius */))
                     {
-                        draw_buffer.object_buffer_[i].transform_.getLocalToWorldMatrix(ref alpha_matrices_[alpha_count]);
+                        draw_buffer.object_buffer_[i].transform_.getLocalToWorldMatrix(ref m_AlphaMatrices[alpha_count]);
                         ++alpha_count;
                     }
                     break;
             }
         }
-        Graphics.DrawMeshInstanced(fighter_alpha_mesh_, 0 /* submeshIndex */,
-                                   fighter_alpha_material_,
-                                   alpha_matrices_,
+        Graphics.DrawMeshInstanced(m_FighterAlphaMesh, 0 /* submeshIndex */,
+                                   m_FighterAlphaMaterial,
+                                   m_AlphaMatrices,
                                    alpha_count,
                                    null,
                                    UnityEngine.Rendering.ShadowCastingMode.Off,
                                    false /* receiveShadows */,
                                    0 /* layer */,
                                    null /* camera */);
-        alpha_burner_material_.SetFloat(shader_CurrentTime, (float)update_time_);
-        Graphics.DrawMeshInstanced(alpha_burner_mesh_, 0 /* submeshIndex */,
-                                   alpha_burner_material_,
-                                   alpha_matrices_,
+        m_AlphaBurnerMaterial.SetFloat(SHADER_PROPERTYID_CURRENT_TIME, (float)m_TotalUpdateTime);
+        Graphics.DrawMeshInstanced(m_AlphaBurnerMesh, 0 /* submeshIndex */,
+                                   m_AlphaBurnerMaterial,
+                                   m_AlphaMatrices,
                                    alpha_count,
                                    null,
                                    UnityEngine.Rendering.ShadowCastingMode.Off,
@@ -350,19 +323,19 @@ public class SystemManager : MonoBehaviour
                 switch (draw_buffer.se_[i])
                 {
                     case DrawBuffer.SE.Explosion:
-                        audio_sources_explosion_[audio_source_explosion_index_].Play();
-                        ++audio_source_explosion_index_;
-                        if (audio_source_explosion_index_ >= AUDIOSOURCE_EXPLOSION_MAX)
+                        m_AudioSourcesExplosion[m_AudioSourceExplosionIndex].Play();
+                        ++m_AudioSourceExplosionIndex;
+                        if (m_AudioSourceExplosionIndex >= AUDIOSOURCE_EXPLOSION_MAX)
                         {
-                            audio_source_explosion_index_ = 0;
+                            m_AudioSourceExplosionIndex = 0;
                         }
                         break;
                     case DrawBuffer.SE.Laser:
-                        audio_sources_laser_[audio_source_laser_index_].Play();
-                        ++audio_source_laser_index_;
-                        if (audio_source_laser_index_ >= AUDIOSOURCE_LASER_MAX)
+                        m_AudioSourcesLaser[m_AudioSourceLaserIndex].Play();
+                        ++m_AudioSourceLaserIndex;
+                        if (m_AudioSourceLaserIndex >= AUDIOSOURCE_LASER_MAX)
                         {
-                            audio_source_laser_index_ = 0;
+                            m_AudioSourceLaserIndex = 0;
                         }
                         break;
                 }
@@ -371,46 +344,100 @@ public class SystemManager : MonoBehaviour
         }
     }
 
-    void camera_update()
+    private void CameraUpdate()
     {
     }
 
-    void unity_update()
+    private void UnityUpdate()
     {
-        ProjectionMatrix = camera_.projectionMatrix;
+        m_ProjectionMatrix = m_Camera.projectionMatrix;
 
-        double render_time = update_time_;
+        double render_time = m_TotalUpdateTime;
         UnityEngine.Profiling.Profiler.BeginSample("SystemManager.render");
-        render(ref draw_buffer_[rendering_front_]);
+        Render(ref m_DrawBuffer[m_RenderingFront]);
         UnityEngine.Profiling.Profiler.EndSample();
         UnityEngine.Profiling.Profiler.BeginSample("SystemManager.render components");
-        Spark.Instance.render(camera_, render_time);
-        Debris.Instance.render(camera_, render_time);
+        Spark.Instance.render(m_Camera, render_time);
+        Debris.Instance.render(m_Camera, render_time);
 
         MySprite.Instance.render();
         MyFont.Instance.render();
         UnityEngine.Profiling.Profiler.EndSample();
     }
 
-    void end_of_frame()
+    private void EndOfFrame()
     {
         if (Time.deltaTime > 0)
         {
-            ++render_sync_frame_;
-            ++render_frame_;
-            stopwatch_.Start();
+            ++m_RenderSyncFrame;
+            ++m_RenderFrame;
+            m_Stopwatch.Start();
         }
         else
         {
-            stopwatch_.Stop();
+            m_Stopwatch.Stop();
         }
     }
 
-    // The Update
-    void Update()
+    public void OnRestartClick()
+    {
+        UnityEngine.SceneManagement.SceneManager.LoadScene("main");
+    }
+
+    public void OnFPSSliderChange(float value)
+    {
+        if (value <= 0f)
+        {
+            m_DeltaTime = 0f;
+        }
+        else
+        {
+            m_DeltaTime = 1f / value;
+        }
+    }
+
+    public void OnMeterToggle()
+    {
+        m_MeterDraw = !m_MeterDraw;
+    }
+
+    public void OnMissileMaxChange()
+    {
+        MissileManager.Instance.changeMissileDrawMax();
+    }
+
+    protected void OnApplicationQuit()
+    {
+        m_FinalMaterial.mainTexture = null; // suppress error-messages on console.
+    }
+
+    protected void OnEnable()
+    {
+#if UNITY_EDITOR
+        UnityEditor.SceneView.onSceneGUIDelegate -= OnSceneGUI;
+        UnityEditor.SceneView.onSceneGUIDelegate += OnSceneGUI;
+#endif
+    }
+
+    protected void Start()
+    {
+        ms_Instance = GameObject.Find("system_manager").GetComponent<SystemManager>(); ;
+        Initialize();
+    }
+
+    protected void OnDisable()
+    {
+        MissileManager.Instance.Release();
+
+#if UNITY_EDITOR
+        UnityEditor.SceneView.onSceneGUIDelegate -= OnSceneGUI;
+#endif
+    }
+
+    protected void Update()
     {
         PerformanceMeter.Instance.beginRender();
-        if (!initialized_)
+        if (!m_IsInitialized)
         {
             return;
         }
@@ -420,67 +447,31 @@ public class SystemManager : MonoBehaviour
 
         InputManager.Instance.update();
         UnityEngine.Profiling.Profiler.BeginSample("main_loop");
-        main_loop();
+        MainLoop();
         UnityEngine.Profiling.Profiler.EndSample();
         // MissileManager.Instance.SyncComputeBuffer();
         UnityEngine.Profiling.Profiler.BeginSample("unity_update");
-        unity_update();
+        UnityUpdate();
         UnityEngine.Profiling.Profiler.EndSample();
         // MissileManager.Instance.SyncComputeBuffer();
-        end_of_frame();
+        EndOfFrame();
     }
 
-    void LateUpdate()
+    protected void LateUpdate()
     {
-        if (!initialized_)
+        if (!m_IsInitialized)
         {
             return;
         }
-        camera_update();
+        CameraUpdate();
         PerformanceMeter.Instance.endBehaviourUpdate();
         // MissileManager.Instance.SyncComputeBuffer();
     }
 
-    void OnRenderObject()
-    {
-        // MissileManager.Instance.SyncComputeBuffer();
-    }
-
-
-    // pause menu callbacks
-    public void OnPauseClick()
-    {
-        pause_ = !pause_;
-    }
-    public void OnRestartClick()
-    {
-        UnityEngine.SceneManagement.SceneManager.LoadScene("main");
-    }
-    public void OnFPSSliderChange(float value)
-    {
-        if (value <= 0f)
-        {
-            dt_ = 0f;
-        }
-        else
-        {
-            dt_ = 1f / value;
-        }
-    }
-    public void OnMeterToggle()
-    {
-        meter_draw_ = !meter_draw_;
-    }
-    public void OnMissileMaxChange()
-    {
-        MissileManager.Instance.changeMissileDrawMax();
-    }
-
 #if UNITY_EDITOR
-    void OnSceneGUI(UnityEditor.SceneView sceneView)
+    private void OnSceneGUI(UnityEditor.SceneView sceneView)
     {
-        MissileManager.Instance.onSceneGUI(sceneView.camera);
+        MissileManager.Instance.OnSceneGUI(sceneView.camera);
     }
 #endif
-
 }

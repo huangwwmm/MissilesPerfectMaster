@@ -132,7 +132,7 @@ public class PerformanceMeter
         int fps100 = (int)(display_fps_);
         MyFont.Instance.putNumber(fps100, 3 /* keta */, 0.5f /* scale */,
                                   x, y, MyFont.Type.White);
-        int game_fps = SystemManager.Instance.getFPS();
+        int game_fps = SystemManager.GetInstance().GetFPS();
         MyFont.Instance.putNumber(game_fps, 3 /* keta */, 0.5f /* scale */,
                                   x + 40, y, MyFont.Type.Blue);
         int missile_draw_max = MissileManager.Instance.missileDrawMax;
