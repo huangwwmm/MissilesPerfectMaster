@@ -4,8 +4,6 @@ public class SystemManager : MonoBehaviour
 {
     private const int UPDATE_FPS = 60;
     private const float UPDATE_DELTA_TIME = 1f / UPDATE_FPS;
-    private const float RENDER_FPS = 60f;
-    private const float RENDER_DELTA_TIME = 1f / RENDER_FPS;
     private const int ALPHA_MAX = 128;
     private static readonly int SHADER_PROPERTYID_CURRENT_TIME = Shader.PropertyToID("_CurrentTime");
 
@@ -23,10 +21,6 @@ public class SystemManager : MonoBehaviour
     private Sprite[] m_Sprites;
     [SerializeField]
     private Material m_SpriteMaterial;
-    [SerializeField]
-    private Font m_Font;
-    [SerializeField]
-    private Material m_FontMaterial;
     [SerializeField]
     private Mesh m_FighterAlphaMesh;
     [SerializeField]
@@ -86,8 +80,7 @@ public class SystemManager : MonoBehaviour
             m_CameraFinal.orthographicSize = size;
         }
 
-        Application.targetFrameRate = (int)RENDER_FPS; // necessary for iOS because the default is 30fps.
-        // QualitySettings.vSyncCount = 1;
+        Application.targetFrameRate = UPDATE_FPS;
 
         m_Stopwatch = new System.Diagnostics.Stopwatch();
         m_Stopwatch.Start();
@@ -111,8 +104,6 @@ public class SystemManager : MonoBehaviour
         Debris.Instance.init(m_DebrisMaterial);
         MySprite.Instance.init(m_Sprites, m_SpriteMaterial);
         MySpriteRenderer.Instance.init(m_Camera);
-        MyFont.Instance.init(m_Font, m_FontMaterial);
-        MyFontRenderer.Instance.init();
 
         m_DrawBuffer = new DrawBuffer[2];
         for (int i = 0; i < 2; ++i)
@@ -176,7 +167,6 @@ public class SystemManager : MonoBehaviour
         // begin
         UnityEngine.Profiling.Profiler.BeginSample("renderUpdate_begin");
         MySprite.Instance.begin();
-        MyFont.Instance.begin();
         Spark.Instance.begin();
         UnityEngine.Profiling.Profiler.EndSample();
 
@@ -192,7 +182,6 @@ public class SystemManager : MonoBehaviour
         // end
         UnityEngine.Profiling.Profiler.BeginSample("renderUpdate_end");
         Spark.Instance.end();
-        MyFont.Instance.end();
         MySprite.Instance.end();
         UnityEngine.Profiling.Profiler.EndSample();
     }
@@ -265,7 +254,6 @@ public class SystemManager : MonoBehaviour
         Debris.Instance.render(m_Camera, render_time);
 
         MySprite.Instance.render();
-        MyFont.Instance.render();
         UnityEngine.Profiling.Profiler.EndSample();
     }
 
