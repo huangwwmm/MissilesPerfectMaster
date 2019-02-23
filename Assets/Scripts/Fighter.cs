@@ -50,7 +50,7 @@ public partial class Fighter : Task
     private Fighter target_fighter_;
     private delegate void OnUpdateFunc(float dt, double update_time);
     private OnUpdateFunc on_update_;
-    private delegate void OnRenderUpdateFunc(int front, ref DrawBuffer draw_buffer);
+    private delegate void OnRenderUpdateFunc(DrawBuffer draw_buffer);
     private OnRenderUpdateFunc on_render_update_;
 
     public static Fighter create(Type type, Vector3 position, Quaternion rotation, double update_time)
@@ -128,9 +128,9 @@ public partial class Fighter : Task
         }
     }
 
-    public override void DoRenderUpdate(int front, CameraBase camera, ref DrawBuffer draw_buffer)
+    public override void DoRenderUpdate(SpectatorCamera camera, DrawBuffer draw_buffer)
     {
-        on_render_update_(front, ref draw_buffer);
+        on_render_update_(draw_buffer);
     }
 
 

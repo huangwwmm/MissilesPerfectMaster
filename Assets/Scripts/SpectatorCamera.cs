@@ -1,12 +1,21 @@
 ﻿using UnityEngine;
 
-public class SpectatorCamera : CameraBase
+public class SpectatorCamera : Task
 {
+    private const float FINAL_CAMERA_SCREEN_HEIGHT = 360f;
+
+    private MyTransform m_Transform;
     private Fighter current_target_;
     private Quaternion offset_rotation_;
     private RigidbodyTransform rigidbody_;
     private int phase_;
     private float time_;
+
+    public void applyTransform(ref Vector3 pos, ref Quaternion rot)
+    {
+        m_Transform.position_ = pos;
+        m_Transform.rotation_ = rot;
+    }
 
     public static SpectatorCamera create()
     {
@@ -18,6 +27,9 @@ public class SpectatorCamera : CameraBase
     public override void Initialize()
     {
         base.Initialize();
+
+        m_Transform.init();
+
         var pos = new Vector3(-1f, 0f, -40f);
         rigidbody_.init();
         rigidbody_.setPosition(ref pos);
@@ -88,14 +100,14 @@ public class SpectatorCamera : CameraBase
         }
     }
 
-    public override void DoRenderUpdate(int front, CameraBase dummy, ref DrawBuffer draw_buffer)
+    public override void DoRenderUpdate(SpectatorCamera dummy, DrawBuffer draw_buffer)
     {
         var offset = new Vector3(0f, 0f, 15f);
         var pos = rigidbody_.transform_.position_ + rigidbody_.transform_.rotation_ * offset;
         pos -= (rigidbody_.transform_.rotation_ * offset_rotation_) * offset;
         var rot = rigidbody_.transform_.rotation_ * offset_rotation_;
         applyTransform(ref pos, ref rot);
-        base.DoRenderUpdate(front, dummy, ref draw_buffer);
+        draw_buffer.registCamera(ref m_Transform);
     }
 
     public void rotateOffsetRotation(float x, float y)

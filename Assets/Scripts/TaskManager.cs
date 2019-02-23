@@ -108,11 +108,11 @@ public class TaskManager
         m_WillAdds.Clear();
     }
 
-    public void DoRendererUpdate(int front, CameraBase camera, ref DrawBuffer drawBuffer)
+    public void DoRendererUpdate(SpectatorCamera camera, DrawBuffer drawBuffer)
     {
         for (Task iterTask = m_First; iterTask != null; iterTask = iterTask._NextTask)
         {
-            iterTask.DoRenderUpdate(front, camera, ref drawBuffer);
+            iterTask.DoRenderUpdate(camera, drawBuffer);
         }
     }
 }

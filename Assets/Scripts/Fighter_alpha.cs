@@ -86,7 +86,7 @@ public partial class Fighter : Task
         rigidbody_.update(dt);
     }
 
-    private void alpha_render_update(int front, ref DrawBuffer draw_buffer)
+    private void alpha_render_update(DrawBuffer draw_buffer)
     {
         draw_buffer.regist(ref rigidbody_.transform_, DrawBuffer.Type.FighterAlpha);
     }

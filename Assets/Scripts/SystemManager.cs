@@ -5,6 +5,7 @@ public class SystemManager : MonoBehaviour
     private const int UPDATE_FPS = 60;
     private const float UPDATE_DELTA_TIME = 1f / UPDATE_FPS;
     private const int ALPHA_MAX = 128;
+    private const float ASPECT_RATIO = 16f / 9f;
     private static readonly int SHADER_PROPERTYID_CURRENT_TIME = Shader.PropertyToID("_CurrentTime");
 
     private static SystemManager ms_Instance;
@@ -18,10 +19,6 @@ public class SystemManager : MonoBehaviour
     [SerializeField]
     private Material m_DebrisMaterial;
     [SerializeField]
-    private Sprite[] m_Sprites;
-    [SerializeField]
-    private Material m_SpriteMaterial;
-    [SerializeField]
     private Mesh m_FighterAlphaMesh;
     [SerializeField]
     private Material m_FighterAlphaMaterial;
@@ -32,118 +29,82 @@ public class SystemManager : MonoBehaviour
 
     private Matrix4x4[] m_AlphaMatrices;
     private Vector4[] m_FrustumPlanes;
-    private Camera m_Camera;
+    private Camera m_MainCamera;
     private GameObject m_CameraFinalHolder;
-    private Camera m_CameraFinal;
+    private Camera m_FinalCamera;
     private RenderTexture m_RenderTexture;
-    private Matrix4x4 m_ProjectionMatrix;
-    private System.Diagnostics.Stopwatch m_Stopwatch;
-    private int m_RenderingFront;
-    private DrawBuffer[] m_DrawBuffer;
-    private DebugCamera m_DebugCamera;
+    private DrawBuffer m_DrawBuffer;
     private SpectatorCamera m_SpectatorCamera;
-    private long m_UpdateFrame;
-    private long m_RenderFrame;
-    private long m_RenderSyncFrame;
     private double m_TotalUpdateTime;
-    private bool m_SpectatorMode;
-    private bool m_IsInitialized = false;
 
     public static SystemManager GetInstance()
     {
-        return ms_Instance ?? (ms_Instance = GameObject.Find("system_manager").GetComponent<SystemManager>());
+        return ms_Instance;
     }
 
-    public Matrix4x4 GetProjectionMatrix()
+    protected void OnEnable()
     {
-        return m_ProjectionMatrix;
+#if UNITY_EDITOR
+        UnityEditor.SceneView.onSceneGUIDelegate -= OnSceneGUI;
+        UnityEditor.SceneView.onSceneGUIDelegate += OnSceneGUI;
+#endif
     }
 
-    private void SetCamera()
+    protected void Awake()
     {
-        if (!m_SpectatorMode)
-        {
-            m_DebugCamera.setup(m_SpectatorCamera);
-        }
-        m_DebugCamera.active_ = !m_SpectatorMode;
-        m_SpectatorCamera.active_ = m_SpectatorMode;
-    }
+        ms_Instance = gameObject.GetComponent<SystemManager>();
 
-    private void Initialize()
-    {
         MyRandom.SetSeed(12345L);
-        m_CameraFinal = GameObject.Find("FinalCamera").GetComponent<Camera>();
-        m_CameraFinal.enabled = false;
-        if ((float)Screen.width / (float)Screen.height < 16f / 9f)
+        m_FinalCamera = GameObject.Find("FinalCamera").GetComponent<Camera>();
+        m_FinalCamera.enabled = false;
+        if ((float)Screen.width / Screen.height < ASPECT_RATIO)
         {
-            var size = m_CameraFinal.orthographicSize * ((16f / 9f) * ((float)Screen.height / (float)Screen.width));
-            m_CameraFinal.orthographicSize = size;
+            m_FinalCamera.orthographicSize = m_FinalCamera.orthographicSize
+                * (ASPECT_RATIO * ((float)Screen.height / Screen.width)); ;
         }
-
         Application.targetFrameRate = UPDATE_FPS;
 
-        m_Stopwatch = new System.Diagnostics.Stopwatch();
-        m_Stopwatch.Start();
-        m_RenderingFront = 0;
+        m_TotalUpdateTime = 100.0; // 猜测是用这个变量当余数，为了避免除0才随便赋了个大于0的值
 
-        m_UpdateFrame = 0;
-        m_TotalUpdateTime = 100.0;    // ゼロクリア状態を過去のものにするため増やしておく
-        m_RenderFrame = 0;
-        m_RenderSyncFrame = 0;
-        m_SpectatorMode = true;
+        m_MainCamera = GameObject.Find("Main Camera").GetComponent<Camera>();
 
-        m_Camera = GameObject.Find("Main Camera").GetComponent<Camera>();
-        m_ProjectionMatrix = m_Camera.projectionMatrix;
-
-        MissileManager.Instance.initialize(m_Camera);
+        MissileManager.Instance.initialize(m_MainCamera);
         InputManager.Instance.init();
-        Controller.Instance.init(false /* auto */);
+        Controller.Instance.init(false);
         TaskManager.GetInstance().Initialize();
         Fighter.createPool();
         Spark.Instance.init(m_SparkMaterial);
         Debris.Instance.init(m_DebrisMaterial);
-        MySprite.Instance.init(m_Sprites, m_SpriteMaterial);
-        MySpriteRenderer.Instance.init(m_Camera);
 
-        m_DrawBuffer = new DrawBuffer[2];
-        for (int i = 0; i < 2; ++i)
-        {
-            m_DrawBuffer[i].init();
-        }
+        m_DrawBuffer = new DrawBuffer();
+        m_DrawBuffer.init();
 
-        m_DebugCamera = DebugCamera.create();
         m_SpectatorCamera = SpectatorCamera.create();
-        SetCamera();
 
         GameManager.GetInstance().Initialize(m_DebugMode);
 
-#if UNITY_PS4 || UNITY_EDITOR || UNITY_STANDALONE_WIN || UNITY_STANDALONE_OSX
-        int rw = 1920;
-        int rh = 1080;
-#else
-        int rw = 1024;
-        int rh = 576;
-#endif
-        m_RenderTexture = new RenderTexture(rw, rh, 24 /* depth */, RenderTextureFormat.ARGB32);
+        m_RenderTexture = new RenderTexture(1920, 1080, 24, RenderTextureFormat.ARGB32);
         m_RenderTexture.Create();
-        m_Camera.targetTexture = m_RenderTexture;
+        m_MainCamera.targetTexture = m_RenderTexture;
         m_FinalMaterial.mainTexture = m_RenderTexture;
         m_AlphaMatrices = new Matrix4x4[ALPHA_MAX];
         m_FrustumPlanes = new Vector4[6];
 
-        m_IsInitialized = true;
-        m_CameraFinal.enabled = true;
+        m_FinalCamera.enabled = true;
     }
 
-    private int GetFront()
+    protected void OnDisable()
     {
-        int updating_front = m_RenderingFront;            // don't flip
-        return updating_front;
+        MissileManager.Instance.Release();
+
+#if UNITY_EDITOR
+        UnityEditor.SceneView.onSceneGUIDelegate -= OnSceneGUI;
+#endif
     }
 
-    private void MainLoop()
+    protected void Update()
     {
-        int updating_front = GetFront();
+        InputManager.Instance.update();
 
         // fetch
         Controller.Instance.fetch(m_TotalUpdateTime);
@@ -152,47 +113,37 @@ public class SystemManager : MonoBehaviour
         // update
         float dt = UPDATE_DELTA_TIME;
         m_SpectatorCamera.rotateOffsetRotation(-controller.flick_y_, controller.flick_x_);
-        UnityEngine.Profiling.Profiler.BeginSample("Task update");
         GameManager.GetInstance().DoUpdate(dt, m_TotalUpdateTime);
         TaskManager.GetInstance().DoUpdate(dt, m_TotalUpdateTime);
-        UnityEngine.Profiling.Profiler.EndSample();
-        ++m_UpdateFrame;
         m_TotalUpdateTime += dt;
 
-        UnityEngine.Profiling.Profiler.BeginSample("MissileManager.update");
         MissileManager.Instance.update(dt, m_TotalUpdateTime);
-        UnityEngine.Profiling.Profiler.EndSample();
 
-        CameraBase current_camera = m_SpectatorMode ? m_SpectatorCamera as CameraBase : m_DebugCamera as CameraBase;
         // begin
-        UnityEngine.Profiling.Profiler.BeginSample("renderUpdate_begin");
-        MySprite.Instance.begin();
         Spark.Instance.begin();
-        UnityEngine.Profiling.Profiler.EndSample();
 
         // renderUpdate
-        UnityEngine.Profiling.Profiler.BeginSample("renderUpdate");
-        m_DrawBuffer[updating_front].beginRender();
-        TaskManager.GetInstance().DoRendererUpdate(updating_front,
-                                          current_camera,
-                                          ref m_DrawBuffer[updating_front]);
-        m_DrawBuffer[updating_front].endRender();
-        UnityEngine.Profiling.Profiler.EndSample();
+        m_DrawBuffer.beginRender();
+        TaskManager.GetInstance().DoRendererUpdate(m_SpectatorCamera,
+                                          m_DrawBuffer);
+        m_DrawBuffer.endRender();
 
         // end
-        UnityEngine.Profiling.Profiler.BeginSample("renderUpdate_end");
         Spark.Instance.end();
-        MySprite.Instance.end();
-        UnityEngine.Profiling.Profiler.EndSample();
+
+        double render_time = m_TotalUpdateTime;
+        DoRender(m_DrawBuffer);
+        Spark.Instance.render(m_MainCamera, render_time);
+        Debris.Instance.render(m_MainCamera, render_time);
     }
 
-    private void Render(ref DrawBuffer draw_buffer)
+    private void DoRender(DrawBuffer draw_buffer)
     {
         // camera
-        m_Camera.transform.position = draw_buffer.camera_transform_.position_;
-        m_Camera.transform.rotation = draw_buffer.camera_transform_.rotation_;
-        m_Camera.enabled = true;
-        var vp = m_Camera.projectionMatrix * m_Camera.worldToCameraMatrix;
+        m_MainCamera.transform.position = draw_buffer.camera_transform_.position_;
+        m_MainCamera.transform.rotation = draw_buffer.camera_transform_.rotation_;
+        m_MainCamera.enabled = true;
+        var vp = m_MainCamera.projectionMatrix * m_MainCamera.worldToCameraMatrix;
         Utility.GetPlanesFromFrustum(m_FrustumPlanes, ref vp);
 
         int alpha_count = 0;
@@ -235,94 +186,6 @@ public class SystemManager : MonoBehaviour
                                    false /* receiveShadows */,
                                    0 /* layer */,
                                    null /* camera */);
-    }
-
-    private void CameraUpdate()
-    {
-    }
-
-    private void UnityUpdate()
-    {
-        m_ProjectionMatrix = m_Camera.projectionMatrix;
-
-        double render_time = m_TotalUpdateTime;
-        UnityEngine.Profiling.Profiler.BeginSample("SystemManager.render");
-        Render(ref m_DrawBuffer[m_RenderingFront]);
-        UnityEngine.Profiling.Profiler.EndSample();
-        UnityEngine.Profiling.Profiler.BeginSample("SystemManager.render components");
-        Spark.Instance.render(m_Camera, render_time);
-        Debris.Instance.render(m_Camera, render_time);
-
-        MySprite.Instance.render();
-        UnityEngine.Profiling.Profiler.EndSample();
-    }
-
-    private void EndOfFrame()
-    {
-        if (Time.deltaTime > 0)
-        {
-            ++m_RenderSyncFrame;
-            ++m_RenderFrame;
-            m_Stopwatch.Start();
-        }
-        else
-        {
-            m_Stopwatch.Stop();
-        }
-    }
-
-    protected void OnApplicationQuit()
-    {
-        m_FinalMaterial.mainTexture = null; // suppress error-messages on console.
-    }
-
-    protected void OnEnable()
-    {
-#if UNITY_EDITOR
-        UnityEditor.SceneView.onSceneGUIDelegate -= OnSceneGUI;
-        UnityEditor.SceneView.onSceneGUIDelegate += OnSceneGUI;
-#endif
-    }
-
-    protected void Start()
-    {
-        ms_Instance = GameObject.Find("system_manager").GetComponent<SystemManager>(); ;
-        Initialize();
-    }
-
-    protected void OnDisable()
-    {
-        MissileManager.Instance.Release();
-
-#if UNITY_EDITOR
-        UnityEditor.SceneView.onSceneGUIDelegate -= OnSceneGUI;
-#endif
-    }
-
-    protected void Update()
-    {
-        if (!m_IsInitialized)
-        {
-            return;
-        }
-
-        InputManager.Instance.update();
-        UnityEngine.Profiling.Profiler.BeginSample("main_loop");
-        MainLoop();
-        UnityEngine.Profiling.Profiler.EndSample();
-        UnityEngine.Profiling.Profiler.BeginSample("unity_update");
-        UnityUpdate();
-        UnityEngine.Profiling.Profiler.EndSample();
-        EndOfFrame();
-    }
-
-    protected void LateUpdate()
-    {
-        if (!m_IsInitialized)
-        {
-            return;
-        }
-        CameraUpdate();
     }
 
 #if UNITY_EDITOR

@@ -71,7 +71,7 @@ public class MissileManager : MonoBehaviour
 
     // singleton
     static MissileManager instance_;
-    public static MissileManager Instance { get { return instance_ ?? (instance_ = GameObject.Find("missile_manager").GetComponent<MissileManager>()); } }
+    public static MissileManager Instance { get { return instance_ ?? (instance_ = GameObject.Find("MissileManager").GetComponent<MissileManager>()); } }
 
     Camera camera_;
     Transform camera_transform_;
@@ -404,9 +404,7 @@ public class MissileManager : MonoBehaviour
     {
 #if !ENABLE_GPUREADBACK
         if ((frame_count_ % 2) == 0) {
-            UnityEngine.Profiling.Profiler.BeginSample("<GetData>");
             cbuffer_missile_result_.GetData(missile_result_list_);
-            UnityEngine.Profiling.Profiler.EndSample();
         }
 #endif
     }
@@ -437,13 +435,9 @@ public class MissileManager : MonoBehaviour
     private void dispatch_compute(float dt, float current_time)
     {
         // set data for compute
-        UnityEngine.Profiling.Profiler.BeginSample("<SetData>spawn_data_");
         cbuffer_spawn_.SetData(spawn_data_);
-        UnityEngine.Profiling.Profiler.EndSample();
         cshader_spawn_.SetFloat(shader_CurrentTime, current_time);
-        UnityEngine.Profiling.Profiler.BeginSample("<SetData>target_data_");
         cbuffer_target_.SetData(m_Missiles);
-        UnityEngine.Profiling.Profiler.EndSample();
         cshader_update_.SetFloat(shader_DT, dt);
         cshader_update_.SetFloat(shader_CurrentTime, current_time);
         var view = camera_.worldToCameraMatrix;
@@ -454,9 +448,7 @@ public class MissileManager : MonoBehaviour
             var proj = camera_.projectionMatrix;
             var matrix_vp = proj * view;
             Utility.GetPlanesFromFrustum(frustum_planes_, ref matrix_vp);
-            UnityEngine.Profiling.Profiler.BeginSample("<SetData>frustum_planes_");
             cbuffer_frustum_planes_.SetData(frustum_planes_);
-            UnityEngine.Profiling.Profiler.EndSample();
         }
         if (spawn_index_ > 0)
         {
@@ -542,7 +534,6 @@ public class MissileManager : MonoBehaviour
 
     private int check_missile_result(float dt)
     {
-        UnityEngine.Profiling.Profiler.BeginSample("<check>missile_result_list_");
         int max_vol = 0;
         for (var i = 0; i < MISSILE_MAX; ++i)
         {
@@ -566,13 +557,11 @@ public class MissileManager : MonoBehaviour
                 }
             }
         }
-        UnityEngine.Profiling.Profiler.EndSample();
         return max_vol;
     }
 
     private int update_status_list(float dt)
     {
-        UnityEngine.Profiling.Profiler.BeginSample("<set>alive_list");
         int missile_alive_count = 0;
         for (var i = 0; i < missile_status_list_.Length; ++i)
         {
@@ -597,7 +586,6 @@ public class MissileManager : MonoBehaviour
                 ++missile_alive_count;
             }
         }
-        UnityEngine.Profiling.Profiler.EndSample();
         return missile_alive_count;
     }
 

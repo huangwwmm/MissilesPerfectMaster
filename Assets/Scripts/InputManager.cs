@@ -39,10 +39,6 @@ public class InputManager
         input_buffer_.flick_vector_ = new Vector2(0f, 0f);
     }
 
-    public int getButton(Button button)
-    {
-        return input_buffer_.buttons_[(int)button];
-    }
     public bool isButton(Button button)
     {
         return input_buffer_.buttons_[(int)button] != 0;

@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-public struct DrawBuffer
+public class DrawBuffer
 {
     public enum Type
     {
