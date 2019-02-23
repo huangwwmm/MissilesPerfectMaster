@@ -566,7 +566,6 @@ public class MissileManager : MonoBehaviour
                 }
             }
         }
-        PerformanceMeter.Instance.setFrameDiff((frame_count_ & 0xff) - missile_result_list_[0].frame_count_);
         UnityEngine.Profiling.Profiler.EndSample();
         return max_vol;
     }
@@ -648,16 +647,6 @@ public class MissileManager : MonoBehaviour
         }
 #endif
 #endif
-
-        // check dead missiles with ComputeBuffer
-        if (frame_count_ % 2 != 0)
-        {
-            int max_vol = check_missile_result(dt);
-            if (max_vol > 240)
-            {
-                SystemManager.GetInstance().RegistSound(DrawBuffer.SE.Explosion); // 爆発音
-            }
-        }
 
         // collect active missiles and get the count.
         int missile_alive_count = update_status_list(dt);
@@ -773,14 +762,6 @@ public class MissileManager : MonoBehaviour
     }
 
     public int missileDrawMax { get { return missile_draw_max_; } }
-    public void changeMissileDrawMax()
-    {
-        missile_draw_max_ += MISSILE_MAX / 16;
-        if (missile_draw_max_ > MISSILE_MAX)
-        {
-            missile_draw_max_ = MISSILE_MAX / 16;
-        }
-    }
 
     private void setup_target(float update_time)
     {

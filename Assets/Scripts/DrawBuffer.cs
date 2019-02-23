@@ -13,24 +13,6 @@ public struct DrawBuffer
         DragonTail,
     }
 
-    public enum SE
-    {
-        None,
-        Bullet,
-        Explosion,
-        Laser,
-        Shield,
-    }
-
-    public enum BGM
-    {
-        Keep,
-        Stop,
-        Pause,
-        Resume,
-        Battle,
-    }
-
     public const int OBJECT_MAX = 1024;
 
     public struct ObjectBuffer
@@ -63,11 +45,7 @@ public struct DrawBuffer
     public MyTransform camera_transform_;
     public ObjectBuffer[] object_buffer_;
     public int object_num_;
-    public SE[] se_;
-    public BGM bgm_;
     public Motion motion_;
-
-    private int audio_idx_;
 
     public void init()
     {
@@ -77,21 +55,11 @@ public struct DrawBuffer
             object_buffer_[i].init();
         }
         object_num_ = 0;
-
-        se_ = new SE[SystemManager.AUDIO_CHANNEL_MAX];
-        for (var i = 0; i < SystemManager.AUDIO_CHANNEL_MAX; ++i)
-        {
-            se_[i] = SE.None;
-        }
-        audio_idx_ = 0;
-
-        bgm_ = BGM.Keep;
     }
 
     public void beginRender()
     {
         object_num_ = 0;
-        audio_idx_ = 0;
     }
 
     public void endRender()
@@ -123,22 +91,6 @@ public struct DrawBuffer
     public void registCamera(ref MyTransform transform)
     {
         camera_transform_ = transform;
-    }
-
-    public void registSound(SE se)
-    {
-        if (audio_idx_ >= SystemManager.AUDIO_CHANNEL_MAX)
-        {
-            Debug.Log("max audio channel is used.");
-            return;
-        }
-        se_[audio_idx_] = se;
-        ++audio_idx_;
-    }
-
-    public void registBgm(BGM bgm)
-    {
-        bgm_ = bgm;
     }
 
     public void registMotion(Motion motion)
