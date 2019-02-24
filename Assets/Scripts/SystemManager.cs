@@ -68,7 +68,7 @@ public class SystemManager : MonoBehaviour
 
         m_MainCamera = GameObject.Find("Main Camera").GetComponent<Camera>();
 
-        MissileManager.Instance.initialize(m_MainCamera);
+        MissileManager.Instance.Initialize(m_MainCamera);
         InputManager.Instance.init();
         Controller.Instance.init(false);
         TaskManager.GetInstance().Initialize();
@@ -79,7 +79,8 @@ public class SystemManager : MonoBehaviour
         m_DrawBuffer = new DrawBuffer();
         m_DrawBuffer.init();
 
-        m_SpectatorCamera = SpectatorCamera.create();
+        m_SpectatorCamera = new SpectatorCamera();
+        m_SpectatorCamera.Initialize();
 
         GameManager.GetInstance().Initialize(m_DebugMode);
 
@@ -112,7 +113,7 @@ public class SystemManager : MonoBehaviour
 
         // update
         float dt = UPDATE_DELTA_TIME;
-        m_SpectatorCamera.rotateOffsetRotation(-controller.flick_y_, controller.flick_x_);
+        m_SpectatorCamera.AddRotationOffset(-controller.flick_y_, controller.flick_x_);
         GameManager.GetInstance().DoUpdate(dt, m_TotalUpdateTime);
         TaskManager.GetInstance().DoUpdate(dt, m_TotalUpdateTime);
         m_TotalUpdateTime += dt;

@@ -167,7 +167,7 @@ public class MissileManager : MonoBehaviour
 #endif
 #endif
 
-    public void initialize(Camera camera)
+    public void Initialize(Camera camera)
     {
         Debug.Assert(SystemInfo.supportsInstancing);
 #if ENABLE_GPUREADBACK

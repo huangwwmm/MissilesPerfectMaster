@@ -5,24 +5,11 @@ public class SpectatorCamera : Task
     private const float FINAL_CAMERA_SCREEN_HEIGHT = 360f;
 
     private MyTransform m_Transform;
-    private Fighter current_target_;
-    private Quaternion offset_rotation_;
-    private RigidbodyTransform rigidbody_;
-    private int phase_;
-    private float time_;
-
-    public void applyTransform(ref Vector3 pos, ref Quaternion rot)
-    {
-        m_Transform.position_ = pos;
-        m_Transform.rotation_ = rot;
-    }
-
-    public static SpectatorCamera create()
-    {
-        var camera = new SpectatorCamera();
-        camera.Initialize();
-        return camera;
-    }
+    private Fighter m_CurrentTarget;
+    private Quaternion m_RotationOffset;
+    private RigidbodyTransform m_RigidbodyTransform;
+    private int m_Phase;
+    private float m_Time;
 
     public override void Initialize()
     {
@@ -31,88 +18,88 @@ public class SpectatorCamera : Task
         m_Transform.init();
 
         var pos = new Vector3(-1f, 0f, -40f);
-        rigidbody_.init();
-        rigidbody_.setPosition(ref pos);
+        m_RigidbodyTransform.init();
+        m_RigidbodyTransform.setPosition(ref pos);
         var target = new Vector3(1f, 0f, 0f);
-        var diff = target - rigidbody_.transform_.position_;
+        var diff = target - m_RigidbodyTransform.transform_.position_;
         var rot = Quaternion.LookRotation(diff);
-        rigidbody_.transform_.setRotation(ref rot);
-        rigidbody_.setDamper(1f);
-        rigidbody_.setRotateDamper(8f);
-        current_target_ = null;
-        offset_rotation_ = Quaternion.identity;
-        phase_ = 0;
-        time_ = 0f;
+        m_RigidbodyTransform.transform_.setRotation(ref rot);
+        m_RigidbodyTransform.setDamper(1f);
+        m_RigidbodyTransform.setRotateDamper(8f);
+        m_CurrentTarget = null;
+        m_RotationOffset = Quaternion.identity;
+        m_Phase = 0;
+        m_Time = 0f;
     }
 
-    public override void DoUpdate(float dt, double update_time)
+    public override void DoUpdate(float deltaTime, double totalUpdateTime)
     {
         bool refresh_target = false;
-        if (current_target_ == null)
+        if (m_CurrentTarget == null)
         {
             refresh_target = true;
         }
         else
         {
-            var probability = current_target_.getHitElapsed(update_time) < 1f ? 1f : 0.01f;
-            if (MyRandom.Probability(probability, dt))
+            var probability = m_CurrentTarget.getHitElapsed(totalUpdateTime) < 1f ? 1f : 0.01f;
+            if (MyRandom.Probability(probability, deltaTime))
             {
                 refresh_target = true;
             }
         }
         if (refresh_target)
         {
-            Fighter closest_fighter = Fighter.searchClosest(ref rigidbody_.transform_.position_, current_target_);
+            Fighter closest_fighter = Fighter.searchClosest(ref m_RigidbodyTransform.transform_.position_, m_CurrentTarget);
             if (closest_fighter != null)
             {
-                current_target_ = closest_fighter;
+                m_CurrentTarget = closest_fighter;
             }
         }
-        if (current_target_ != null)
+        if (m_CurrentTarget != null)
         {
-            switch (phase_)
+            switch (m_Phase)
             {
                 case 0:
                     {
-                        var target = current_target_.rigidbody_.transform_.transformPositionZ(16f);
-                        rigidbody_.addSpringForce(ref target, 4f /* spring ratio */);
-                        if (time_ < update_time)
+                        var target = m_CurrentTarget.rigidbody_.transform_.transformPositionZ(16f);
+                        m_RigidbodyTransform.addSpringForce(ref target, 4f /* spring ratio */);
+                        if (m_Time < totalUpdateTime)
                         {
-                            phase_ = 1;
-                            time_ = (float)update_time + MyRandom.Range(5f, 28f);
+                            m_Phase = 1;
+                            m_Time = (float)totalUpdateTime + MyRandom.Range(5f, 28f);
                         }
                     }
                     break;
                 case 1:
                     {
-                        var target = current_target_.rigidbody_.transform_.transformPositionZ(-2f);
-                        rigidbody_.addSpringForce(ref target, 2f /* spring ratio */);
-                        if (time_ < update_time)
+                        var target = m_CurrentTarget.rigidbody_.transform_.transformPositionZ(-2f);
+                        m_RigidbodyTransform.addSpringForce(ref target, 2f /* spring ratio */);
+                        if (m_Time < totalUpdateTime)
                         {
-                            phase_ = 0;
-                            time_ = (float)update_time + MyRandom.Range(5f, 28f);
+                            m_Phase = 0;
+                            m_Time = (float)totalUpdateTime + MyRandom.Range(5f, 28f);
                         }
                     }
                     break;
             }
-            rigidbody_.addSpringTorqueCalcUp(ref current_target_.rigidbody_.transform_.position_, 40f /* torque_level */);
-            rigidbody_.update(dt);
+            m_RigidbodyTransform.addSpringTorqueCalcUp(ref m_CurrentTarget.rigidbody_.transform_.position_, 40f /* torque_level */);
+            m_RigidbodyTransform.update(deltaTime);
         }
     }
 
-    public override void DoRenderUpdate(SpectatorCamera dummy, DrawBuffer draw_buffer)
+    public override void DoRenderUpdate(SpectatorCamera dummy, DrawBuffer drawBuffer)
     {
-        var offset = new Vector3(0f, 0f, 15f);
-        var pos = rigidbody_.transform_.position_ + rigidbody_.transform_.rotation_ * offset;
-        pos -= (rigidbody_.transform_.rotation_ * offset_rotation_) * offset;
-        var rot = rigidbody_.transform_.rotation_ * offset_rotation_;
-        applyTransform(ref pos, ref rot);
-        draw_buffer.registCamera(ref m_Transform);
+        Vector3 offset = new Vector3(0f, 0f, 15f);
+        Vector3 pos = m_RigidbodyTransform.transform_.position_ + m_RigidbodyTransform.transform_.rotation_ * offset;
+        pos -= (m_RigidbodyTransform.transform_.rotation_ * m_RotationOffset) * offset;
+        Quaternion rot = m_RigidbodyTransform.transform_.rotation_ * m_RotationOffset;
+        m_Transform.position_ = pos;
+        m_Transform.rotation_ = rot;
+        drawBuffer.registCamera(ref m_Transform);
     }
 
-    public void rotateOffsetRotation(float x, float y)
+    public void AddRotationOffset(float x, float y)
     {
-        offset_rotation_ *= Quaternion.Euler(x, y, 0f);
-        offset_rotation_ = Quaternion.Euler(offset_rotation_.eulerAngles);
+        m_RotationOffset *= Quaternion.Euler(x, y, 0f);
     }
 }
