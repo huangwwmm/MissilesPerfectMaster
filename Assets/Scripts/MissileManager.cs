@@ -68,11 +68,6 @@ public struct SortData
 
 public class MissileManager : MonoBehaviour
 {
-
-    // singleton
-    static MissileManager instance_;
-    public static MissileManager Instance { get { return instance_ ?? (instance_ = GameObject.Find("MissileManager").GetComponent<MissileManager>()); } }
-
     Camera camera_;
     Transform camera_transform_;
     [SerializeField] Mesh mesh_missile_;
@@ -215,10 +210,10 @@ public class MissileManager : MonoBehaviour
         missile_data_ = new MissileData[MISSILE_MAX];
         for (var i = 0; i < missile_data_.Length; ++i)
         {
-            missile_data_[i].position_ = CV.Vector3Zero;
+            missile_data_[i].position_ = Vector3.zero;
             missile_data_[i].spawn_time_ = FLOAT_MAX;
-            missile_data_[i].omega_ = CV.Vector3Zero;
-            missile_data_[i].rotation_ = CV.QuaternionIdentity;
+            missile_data_[i].omega_ = Vector3.zero;
+            missile_data_[i].rotation_ = Quaternion.identity;
             missile_data_[i].target_id_ = -1;
             missile_data_[i].dead_time_ = FLOAT_MAX;
         }
@@ -388,6 +383,8 @@ public class MissileManager : MonoBehaviour
 #if SYNC_COMPUTE_END_OF_FRAME
         StartCoroutine(frame_loop());
 #endif
+
+        UnityEditor.SceneView.onSceneGUIDelegate += OnSceneGUI;
     }
 
     IEnumerator frame_loop()
@@ -417,6 +414,8 @@ public class MissileManager : MonoBehaviour
 
     public void Release()
     {
+        UnityEditor.SceneView.onSceneGUIDelegate += OnSceneGUI;
+
         // release compute buffers
         cbuffer_explosion_drawindirect_args_.Release();
         cbuffer_trail_index_.Release();
@@ -478,7 +477,7 @@ public class MissileManager : MonoBehaviour
         cbuffer_trail_drawindirect_args_.SetData(trail_drawindirect_args_);
         // set data for explosion
         material_explosion_.SetFloat(shader_CurrentTime, current_time);
-        material_explosion_.SetVector(shader_CamUp, camera_transform_.TransformVector(CV.Vector3Up));
+        material_explosion_.SetVector(shader_CamUp, camera_transform_.TransformVector(Vector3.up));
         explosion_drawindirect_args_[1] = (uint)missile_alive_count;
         cbuffer_explosion_drawindirect_args_.SetData(explosion_drawindirect_args_);
 
@@ -654,9 +653,9 @@ public class MissileManager : MonoBehaviour
         }
     }
 
-    public void OnSceneGUI(Camera camera)
+    public void OnSceneGUI(UnityEditor.SceneView sceneView)
     {
-        draw(camera, drawn_update_time_, drawn_missile_alive_count_);
+        draw(sceneView.camera, drawn_update_time_, drawn_missile_alive_count_);
     }
 
     public bool checkHitAndClear(int target_id)

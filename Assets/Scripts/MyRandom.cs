@@ -43,38 +43,4 @@ public static class MyRandom
         int val = (int)(Rand() & 0xffff);
         return (val * (max - min) / 0xffff) + min;
     }
-
-    /// <summary>
-    /// [min, max)
-    /// </summary>
-    public static int Range(int min, int max)
-    {
-        return (int)((Rand() % (max - min))) + min;
-    }
-
-    /// <param name="ratio">范围0 ~ 1</param>
-    public static bool Probability(float ratio)
-    {
-        uint v = Rand() & 0xffff;
-        uint p = (uint)((1 << 16) * ratio);
-        return (v < p);
-    }
-
-    /// <summary>
-    /// UNDONE 没懂这里是算什么的
-    /// </summary>
-    public static bool Probability(float happenTimesPerSecond, float deltaTime)
-    {
-        float v = Range(0f, 1f);
-        return (v < happenTimesPerSecond * deltaTime);
-    }
-
-    /// <summary>
-    /// 在球面上随机一点
-    /// </summary>
-    public static Vector3 PointOnSphere(float radius)
-    {
-        Vector3 point = new Vector3(Range(-1f, 1f), Range(-1f, 1f), Range(-1f, 1f));
-        return point * (radius / point.magnitude);
-    }
 }
