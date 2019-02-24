@@ -105,6 +105,10 @@ public class MissileManager : MonoBehaviour
     private int m_RequestIdx;
 
     private float m_DrawnUpdateTime;
+    /// <summary>
+    /// 从GPU请求数据, 这个比较复杂. 直接看文档把
+    /// PS: 如果只是想用GPU做运算, 看下这个DEMO的用法就行, 但知道原理还是有帮助的
+    /// </summary>
     private UnityEngine.Rendering.AsyncGPUReadbackRequest[] m_Requests;
 
     public void Initialize(Camera camera)
