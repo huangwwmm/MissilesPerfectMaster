@@ -31,6 +31,8 @@
             float _Debug;
 
              struct appdata_custom {
+                 // UNDONE 这两参数是啥？不知道懒得看了，周一问祝锐
+                 // 如果祝锐也不知道，那就去看看Graphics.DrawMeshInstancedIndirect的文档，猜测就是这个API传进来的
                 uint instanceID : SV_InstanceID;
                 uint vertexID : SV_VertexID;
                 float4 vertex : POSITION;

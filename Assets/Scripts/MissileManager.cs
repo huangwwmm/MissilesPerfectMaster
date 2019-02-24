@@ -4,11 +4,13 @@ using System.Runtime.InteropServices;
 public class MissileManager : MonoBehaviour
 {
     private const int MAX_RQUESTS = 4;
-    private const float FLOAT_MAX = 1e+38f;
     private const int THREAD_MAX = 512;
     private const int MISSILE_MAX = THREAD_MAX * 16;
     private const int SPAWN_MAX = 64;
     private const int TARGET_MAX = 256;
+    /// <summary>
+    /// <see cref="m_TrailMesh"/>
+    /// </summary>
     private const int TRAIL_LENGTH = 32;
     private const float MISSILE_ALIVE_PERIOD = 20f;
     private const float MISSILE_ALIVE_PERIOD_AFTER_TARGET_DEATH = 2f;
@@ -21,6 +23,7 @@ public class MissileManager : MonoBehaviour
     private static readonly int SHADER_PROPERTYID_CAMPOS = Shader.PropertyToID("_CamPos");
     private static readonly int SHADER_PROPERTYID_FRAMECOUNT = Shader.PropertyToID("_FrameCount");
     private static readonly int SHADER_PROPERTYID_DISPLAYNUM = Shader.PropertyToID("_DisplayNum");
+    private static Bounds UNLIMITED_BOUNDS = new Bounds(Vector3.zero, new Vector3(999999f, 999999f, 999999f));
 
     [SerializeField]
     private Mesh m_MissileMesh;
@@ -35,53 +38,74 @@ public class MissileManager : MonoBehaviour
     [SerializeField]
     private Material m_ExplosionMaterial;
     [SerializeField]
-    ComputeShader m_SpawnCshader;
+    private ComputeShader m_SpawnCshader;
     [SerializeField]
-    ComputeShader m_UpdateCshader;
+    private ComputeShader m_UpdateCshader;
     [SerializeField]
-    ComputeShader m_SortCshader;
+    private ComputeShader m_SortCshader;
 
     private Camera m_Camera;
-    private Mesh m_TrailMesh;
-    private Mesh m_ExplosionMesh;
-    private uint[] m_MissileDrawindirectArgs;
-    private uint[] m_BurnerDrawindirectArgs;
-    private uint[] m_TrailDrawindirectArgs;
-    private uint[] m_ExplosionDrawindirectArgs;
-    private MissileData[] m_Missiles;
-    private SpawnData[] m_Spawns;
-    private TargetData[] m_Targets;
-    private ResultData[] m_Results;
-    private SortData[] m_MissileSortKeys;
-    private Vector4[] m_FrustumPlanes;
-    private Vector4[] m_Trails;
-    private int[] m_TrailIndexs;
     private int m_FrameCount = -1;
-    private float[] m_MissileStatuss;
-    private byte[] m_TargetHits;
-    private int m_SpawnIdx;
-    private int m_SpawnCkernel;
     private int m_UpdateCkernel;
     private int m_SortCkernel;
-    private ComputeBuffer m_MissileCbufferDrawindirectArgs;
+
+    private MissileData[] m_Missiles;
     private ComputeBuffer m_MissileCbuffer;
-    private ComputeBuffer m_BurnerCbufferDrawindirectArgs;
-    private ComputeBuffer m_SpawnCbuffer;
-    private ComputeBuffer m_TargetCbuffer;
+    private int m_MissileDrawnAliveCount;
+    private uint[] m_MissileDrawindirectArgs;
+    private ComputeBuffer m_MissileDrawindirectArgsCbuffer;
     private ComputeBuffer m_MissileResultCbuffer;
+    private SortData[] m_MissileSortKeys;
     private ComputeBuffer m_MissileSortKeysCbuffer;
-    private ComputeBuffer m_FrustumPlanesCbuffer;
-    private ComputeBuffer m_TrailCbufferDrawindirectArgs;
+    private float[] m_MissileStatuss;
+    private int m_NextSpawnMissileIdx;
+    private int m_MaxMissileDrwawCount;
+
+    private uint[] m_BurnerDrawindirectArgs;
+    private ComputeBuffer m_BurnerDrawindirectArgsCbuffer;
+
+    /// <summary>
+    /// 例<see cref="TRAIL_LENGTH"/>为3时：
+    /// 0 ---- 1
+    ///   |  |
+    ///   |  |
+    /// 2 ---- 3
+    ///   |  |
+    ///   |  |
+    /// 4 ---- 5
+    /// 2个长方形(4个三角形), 6个顶点
+    /// </summary>
+    private Mesh m_TrailMesh;
+    private Vector4[] m_Trails;
+    private int[] m_TrailIndexs;
     private ComputeBuffer m_TrailCbuffer;
     private ComputeBuffer m_TrailIndexCbuffer;
-    private ComputeBuffer m_ExplosionCbufferDrawindirectArgs;
-    private Bounds m_UnlimitedBounds;
-    private int m_NextSpawnMissileIdx;
-    private float m_DrawnUpdateTime_;
-    private int m_MissileDrawnAliveCount;
-    private int m_MaxMissileDrwawCount;
-    private UnityEngine.Rendering.AsyncGPUReadbackRequest[] m_Requests;
+    private uint[] m_TrailDrawindirectArgs;
+    private ComputeBuffer m_TrailDrawindirectArgsCbuffer;
+
+    /// <summary>
+    /// 和<see cref="m_TrailMesh"/>差不多
+    /// </summary>
+    private Mesh m_ExplosionMesh;
+    private uint[] m_ExplosionDrawindirectArgs;
+    private ComputeBuffer m_ExplosionDrawindirectArgsCbuffer;
+
+    private int m_SpawnIdx;
+    private int m_SpawnCkernel;
+    private SpawnData[] m_Spawns;
+    private ComputeBuffer m_SpawnCbuffer;
+
+    private TargetData[] m_Targets;
+    private ComputeBuffer m_TargetCbuffer;
+
+    private Vector4[] m_FrustumPlanes;
+    private ComputeBuffer m_FrustumPlanesCbuffer;
+
+    private ResultData[] m_Results;
     private int m_RequestIdx;
+
+    private float m_DrawnUpdateTime;
+    private UnityEngine.Rendering.AsyncGPUReadbackRequest[] m_Requests;
 
     public void Initialize(Camera camera)
     {
@@ -90,29 +114,61 @@ public class MissileManager : MonoBehaviour
 
         m_Camera = camera;
 
-        // mesh trail
+        #region Trail
         {
-            var vertices = new Vector3[TRAIL_LENGTH * 2];
-            var triangles = new int[(TRAIL_LENGTH - 1) * 6];
-            for (var i = 0; i < TRAIL_LENGTH - 1; ++i)
+            // Mesh
+            Vector3[] vertices = new Vector3[TRAIL_LENGTH * 2];
+            int[] triangles = new int[(TRAIL_LENGTH - 1) * 6];
+            for (var iTrail = 0; iTrail < TRAIL_LENGTH - 1; ++iTrail)
             {
-                triangles[i * 6 + 0] = (i + 0) * 2 + 0;
-                triangles[i * 6 + 1] = (i + 0) * 2 + 1;
-                triangles[i * 6 + 2] = (i + 1) * 2 + 0;
-                triangles[i * 6 + 3] = (i + 1) * 2 + 0;
-                triangles[i * 6 + 4] = (i + 0) * 2 + 1;
-                triangles[i * 6 + 5] = (i + 1) * 2 + 1;
+                // 见m_TrailMesh的注释
+                triangles[iTrail * 6 + 0] = (iTrail + 0) * 2 + 0;
+                triangles[iTrail * 6 + 1] = (iTrail + 0) * 2 + 1;
+                triangles[iTrail * 6 + 2] = (iTrail + 1) * 2 + 0;
+                triangles[iTrail * 6 + 3] = (iTrail + 1) * 2 + 0;
+                triangles[iTrail * 6 + 4] = (iTrail + 0) * 2 + 1;
+                triangles[iTrail * 6 + 5] = (iTrail + 1) * 2 + 1;
             }
             m_TrailMesh = new Mesh();
             m_TrailMesh.name = "trail";
             m_TrailMesh.vertices = vertices;
             m_TrailMesh.triangles = triangles;
-        }
 
-        // mesh explosion
+            // Vertex and Indexs
+            m_Trails = new Vector4[TRAIL_LENGTH * MISSILE_MAX];
+            for (var iTrail = 0; iTrail < m_Trails.Length; ++iTrail)
+            {
+                m_Trails[iTrail].x = 0f;
+                m_Trails[iTrail].y = 0f;
+                m_Trails[iTrail].z = 0f;
+                m_Trails[iTrail].w = 0f;
+            }
+
+            m_TrailIndexs = new int[MISSILE_MAX];
+            for (var iTrail = 0; iTrail < m_TrailIndexs.Length; ++iTrail)
+            {
+                m_TrailIndexs[iTrail] = 0;
+            }
+
+            // ComputeBuffer
+            m_TrailDrawindirectArgs = new uint[5] { 0, 0, 0, 0, 0 };
+            m_TrailDrawindirectArgsCbuffer = new ComputeBuffer(1
+                , (m_TrailDrawindirectArgs.Length * Marshal.SizeOf(typeof(uint)))
+                , ComputeBufferType.IndirectArguments);
+            m_TrailDrawindirectArgs[0] = m_TrailMesh.GetIndexCount(0);
+            m_TrailDrawindirectArgsCbuffer.SetData(m_TrailDrawindirectArgs);
+            m_TrailCbuffer = new ComputeBuffer(m_Trails.Length, Marshal.SizeOf(typeof(Vector4)));
+            m_TrailCbuffer.SetData(m_Trails);
+            m_TrailIndexCbuffer = new ComputeBuffer(m_TrailIndexs.Length, Marshal.SizeOf(typeof(int)));
+            m_TrailIndexCbuffer.SetData(m_TrailIndexs);
+        }
+        #endregion
+
+        #region Explosion
         {
-            var vertices = new Vector3[4];
-            var triangles = new int[6];
+            // Mesh 爆炸的特效就是一个Billboard, 只要两个三角形
+            Vector3[] vertices = new Vector3[4];
+            int[] triangles = new int[6];
             triangles[0] = 0;
             triangles[1] = 1;
             triangles[2] = 2;
@@ -123,93 +179,83 @@ public class MissileManager : MonoBehaviour
             m_ExplosionMesh.name = "explosion";
             m_ExplosionMesh.vertices = vertices;
             m_ExplosionMesh.triangles = triangles;
+
+            // ComputeBuffer
+            m_ExplosionDrawindirectArgs = new uint[5] { 0, 0, 0, 0, 0 };
+            m_ExplosionDrawindirectArgsCbuffer = new ComputeBuffer(1
+                , (m_ExplosionDrawindirectArgs.Length * Marshal.SizeOf(typeof(uint)))
+                , ComputeBufferType.IndirectArguments);
+            m_ExplosionDrawindirectArgs[0] = m_ExplosionMesh.GetIndexCount(0);
+            m_ExplosionDrawindirectArgsCbuffer.SetData(m_ExplosionDrawindirectArgs);
+        }
+        #endregion
+
+        #region Missile
+        {
+            m_Missiles = new MissileData[MISSILE_MAX];
+            for (var iMissile = 0; iMissile < m_Missiles.Length; ++iMissile)
+            {
+                m_Missiles[iMissile].Position = Vector3.zero;
+                m_Missiles[iMissile].SpawnTime = float.MaxValue;
+                m_Missiles[iMissile].Omega = Vector3.zero;
+                m_Missiles[iMissile].Rotation = Quaternion.identity;
+                m_Missiles[iMissile].TargetId = -1;
+                m_Missiles[iMissile].DeadTime = float.MaxValue;
+            }
+
+            // ComputeBuffer
+            m_MissileDrawindirectArgs = new uint[5] { 0, 0, 0, 0, 0 };
+            m_MissileDrawindirectArgsCbuffer = new ComputeBuffer(1
+                , (m_MissileDrawindirectArgs.Length * Marshal.SizeOf(typeof(uint)))
+                , ComputeBufferType.IndirectArguments);
+            m_MissileDrawindirectArgs[0] = m_MissileMesh.GetIndexCount(0);
+            m_MissileDrawindirectArgsCbuffer.SetData(m_MissileDrawindirectArgs);
+        }
+        #endregion
+
+        m_Spawns = new SpawnData[SPAWN_MAX];
+        for (var iSpawn = 0; iSpawn < m_Spawns.Length; ++iSpawn)
+        {
+            m_Spawns[iSpawn].MissileId = -1;
+            m_Spawns[iSpawn].TargetId = -1;
+            m_Spawns[iSpawn].Valid = 0;
         }
 
-        m_MissileDrawindirectArgs = new uint[5] { 0, 0, 0, 0, 0 };
-        m_BurnerDrawindirectArgs = new uint[5] { 0, 0, 0, 0, 0 };
-        m_Missiles = new MissileData[MISSILE_MAX];
-        for (var i = 0; i < m_Missiles.Length; ++i)
-        {
-            m_Missiles[i].Position = Vector3.zero;
-            m_Missiles[i].SpawnTime = FLOAT_MAX;
-            m_Missiles[i].Omega = Vector3.zero;
-            m_Missiles[i].Rotation = Quaternion.identity;
-            m_Missiles[i].TargetId = -1;
-            m_Missiles[i].DeadTime = FLOAT_MAX;
-        }
-        m_Spawns = new SpawnData[SPAWN_MAX];
-        for (var i = 0; i < m_Spawns.Length; ++i)
-        {
-            m_Spawns[i].MissileId = -1;
-            m_Spawns[i].TargetId = -1;
-            m_Spawns[i].Valid = 0;
-        }
         m_Targets = new TargetData[TARGET_MAX];
-        for (var i = 0; i < m_Targets.Length; ++i)
-        {
-            m_Targets[i].DeadTime = FLOAT_MAX;
-            m_Targets[i].SpawnTime = FLOAT_MAX;
-        }
 
         m_Results = new ResultData[MISSILE_MAX * 2];
-        for (var i = 0; i < m_Results.Length; ++i)
+        for (var iResult = 0; iResult < m_Results.Length; ++iResult)
         {
-            m_Results[i].Cond = 0;
-            m_Results[i].Dist = 0;
-            m_Results[i].TargetId = 0;
-            m_Results[i].FrameCount = 0;
+            m_Results[iResult].Cond = 0;
+            m_Results[iResult].Dist = 0;
+            m_Results[iResult].TargetId = 0;
+            m_Results[iResult].FrameCount = 0;
         }
 
         m_MissileSortKeys = new SortData[MISSILE_MAX];
+
         m_MissileStatuss = new float[MISSILE_MAX];
-        for (var i = 0; i < m_MissileStatuss.Length; ++i)
+        for (var iMissile = 0; iMissile < m_MissileStatuss.Length; ++iMissile)
         {
-            m_MissileStatuss[i] = 0f;
-        }
-        m_FrustumPlanes = new Vector4[6];
-        for (var i = 0; i < m_FrustumPlanes.Length; ++i)
-        {
-            m_FrustumPlanes[i] = new Vector4(0, 0, 0, 0);
+            m_MissileStatuss[iMissile] = 0f;
         }
 
-        m_TargetHits = new byte[TARGET_MAX];
-        for (var i = 0; i < m_TargetHits.Length; ++i)
+        m_FrustumPlanes = new Vector4[6];
+        for (var iFrustumPlanes = 0; iFrustumPlanes < m_FrustumPlanes.Length; ++iFrustumPlanes)
         {
-            m_TargetHits[i] = 0;
+            m_FrustumPlanes[iFrustumPlanes] = new Vector4(0, 0, 0, 0);
         }
+
         m_SpawnIdx = 0;
 
-        m_TrailDrawindirectArgs = new uint[5] { 0, 0, 0, 0, 0 };
-        m_Trails = new Vector4[TRAIL_LENGTH * MISSILE_MAX];
-        for (var i = 0; i < m_Trails.Length; ++i)
-        {
-            m_Trails[i].x = 0f;
-            m_Trails[i].y = 0f;
-            m_Trails[i].z = 0f;
-            m_Trails[i].w = 0f;
-        }
-        m_TrailIndexs = new int[MISSILE_MAX];
-        for (var i = 0; i < m_TrailIndexs.Length; ++i)
-        {
-            m_TrailIndexs[i] = 0;
-        }
+        // Burner ComputeBuffer
+        m_BurnerDrawindirectArgs = new uint[5] { 0, 0, 0, 0, 0 };
+        m_BurnerDrawindirectArgsCbuffer = new ComputeBuffer(1
+            , (m_BurnerDrawindirectArgs.Length * Marshal.SizeOf(typeof(uint)))
+            , ComputeBufferType.IndirectArguments);
+        m_BurnerDrawindirectArgs[0] = m_BurnerMesh.GetIndexCount(0);
+        m_BurnerDrawindirectArgsCbuffer.SetData(m_BurnerDrawindirectArgs);
 
-        m_ExplosionDrawindirectArgs = new uint[5] { 0, 0, 0, 0, 0 };
-
-        /* compute buffers */
-        // missile
-        m_MissileCbufferDrawindirectArgs = new ComputeBuffer(1 /* count */,
-                                                               (m_MissileDrawindirectArgs.Length *
-                                                                Marshal.SizeOf(typeof(uint))) /* stride */,
-                                                               ComputeBufferType.IndirectArguments);
-        m_MissileDrawindirectArgs[0] = m_MissileMesh.GetIndexCount(0 /* submesh */);
-        m_MissileCbufferDrawindirectArgs.SetData(m_MissileDrawindirectArgs);
-        m_BurnerCbufferDrawindirectArgs = new ComputeBuffer(1 /* count */,
-                                                              (m_BurnerDrawindirectArgs.Length *
-                                                               Marshal.SizeOf(typeof(uint))) /* stride */,
-                                                              ComputeBufferType.IndirectArguments);
-        m_BurnerDrawindirectArgs[0] = m_BurnerMesh.GetIndexCount(0 /* submesh */);
-        m_BurnerCbufferDrawindirectArgs.SetData(m_BurnerDrawindirectArgs);
         m_MissileCbuffer = new ComputeBuffer(m_Missiles.Length, Marshal.SizeOf(typeof(MissileData)));
         m_MissileCbuffer.SetData(m_Missiles);
         m_SpawnCbuffer = new ComputeBuffer(m_Spawns.Length, Marshal.SizeOf(typeof(SpawnData)));
@@ -221,26 +267,6 @@ public class MissileManager : MonoBehaviour
         m_MissileSortKeysCbuffer.SetData(m_MissileSortKeys);
         m_FrustumPlanesCbuffer = new ComputeBuffer(m_FrustumPlanes.Length, Marshal.SizeOf(typeof(Vector4)));
         m_FrustumPlanesCbuffer.SetData(m_FrustumPlanes);
-
-        // trail
-        m_TrailCbufferDrawindirectArgs = new ComputeBuffer(1 /* count */,
-                                                             (m_TrailDrawindirectArgs.Length *
-                                                              Marshal.SizeOf(typeof(uint))) /* stride */,
-                                                             ComputeBufferType.IndirectArguments);
-        m_TrailDrawindirectArgs[0] = m_TrailMesh.GetIndexCount(0 /* submesh */);
-        m_TrailCbufferDrawindirectArgs.SetData(m_TrailDrawindirectArgs);
-        m_TrailCbuffer = new ComputeBuffer(m_Trails.Length, Marshal.SizeOf(typeof(Vector4)));
-        m_TrailCbuffer.SetData(m_Trails);
-        m_TrailIndexCbuffer = new ComputeBuffer(m_TrailIndexs.Length, Marshal.SizeOf(typeof(int)));
-        m_TrailIndexCbuffer.SetData(m_TrailIndexs);
-
-        // explosion
-        m_ExplosionCbufferDrawindirectArgs = new ComputeBuffer(1 /* count */,
-                                                                 (m_ExplosionDrawindirectArgs.Length *
-                                                                  Marshal.SizeOf(typeof(uint))) /* stride */,
-                                                                 ComputeBufferType.IndirectArguments);
-        m_ExplosionDrawindirectArgs[0] = m_ExplosionMesh.GetIndexCount(0 /* submesh */);
-        m_ExplosionCbufferDrawindirectArgs.SetData(m_ExplosionDrawindirectArgs);
 
         m_Requests = new UnityEngine.Rendering.AsyncGPUReadbackRequest[MAX_RQUESTS];
         m_RequestIdx = 0;
@@ -276,17 +302,18 @@ public class MissileManager : MonoBehaviour
         // setup for burner shader
         m_BurnerMaterial.SetBuffer("cbuffer_missile", m_MissileCbuffer);
         m_BurnerMaterial.SetBuffer("cbuffer_missile_sort_key_list", m_MissileSortKeysCbuffer);
-        // setup for trail shader
-        m_TrailMaterial.SetBuffer("cbuffer_trail", m_TrailCbuffer);
-        m_TrailMaterial.SetBuffer("cbuffer_trail_index", m_TrailIndexCbuffer);
-        m_TrailMaterial.SetBuffer("cbuffer_missile_sort_key_list", m_MissileSortKeysCbuffer);
         // setup for explosion shader
         m_ExplosionMaterial.SetBuffer("cbuffer_missile", m_MissileCbuffer);
         m_ExplosionMaterial.SetBuffer("cbuffer_missile_sort_key_list", m_MissileSortKeysCbuffer);
 
-        m_UnlimitedBounds = new Bounds(Vector3.zero, new Vector3(999999f, 999999f, 999999f));
+        // Material Buffer
+        // UNDOEN 是因为ComputeBuffer本身就在现存中,所以只需要在初始化时SetBuffer一次么? 也就是SetBuffer其实是把m_TrailCbuffer在显存中的指针告诉Material
+        m_TrailMaterial.SetBuffer("cbuffer_trail", m_TrailCbuffer);
+        m_TrailMaterial.SetBuffer("cbuffer_trail_index", m_TrailIndexCbuffer);
+        m_TrailMaterial.SetBuffer("cbuffer_missile_sort_key_list", m_MissileSortKeysCbuffer);
+
         m_NextSpawnMissileIdx = 0;
-        m_DrawnUpdateTime_ = 0f;
+        m_DrawnUpdateTime = 0f;
         m_MissileDrawnAliveCount = 0;
         m_MaxMissileDrwawCount = 4096;
 
@@ -298,18 +325,18 @@ public class MissileManager : MonoBehaviour
         UnityEditor.SceneView.onSceneGUIDelegate -= OnSceneGUI;
 
         // release compute buffers
-        m_ExplosionCbufferDrawindirectArgs.Release();
+        m_ExplosionDrawindirectArgsCbuffer.Release();
         m_TrailIndexCbuffer.Release();
         m_TrailCbuffer.Release();
-        m_TrailCbufferDrawindirectArgs.Release();
+        m_TrailDrawindirectArgsCbuffer.Release();
         m_FrustumPlanesCbuffer.Release();
         m_MissileSortKeysCbuffer.Release();
         m_MissileResultCbuffer.Release();
         m_TargetCbuffer.Release();
         m_SpawnCbuffer.Release();
         m_MissileCbuffer.Release();
-        m_BurnerCbufferDrawindirectArgs.Release();
-        m_MissileCbufferDrawindirectArgs.Release();
+        m_BurnerDrawindirectArgsCbuffer.Release();
+        m_MissileDrawindirectArgsCbuffer.Release();
     }
 
     private void dispatch_compute(float dt, float current_time)
@@ -333,6 +360,8 @@ public class MissileManager : MonoBehaviour
         {
             m_SpawnCshader.Dispatch(m_SpawnCkernel, 1, 1, 1);
         }
+        
+        // UNDONE 在shader中也定义了threadGroups, 两者有什么区别?
         m_UpdateCshader.Dispatch(m_UpdateCkernel, MISSILE_MAX / THREAD_MAX, 1, 1);
         m_SortCshader.Dispatch(m_SortCkernel, 1, 1, 1);
     }
@@ -344,30 +373,30 @@ public class MissileManager : MonoBehaviour
 
         // set data for missile
         m_MissileDrawindirectArgs[1] = (uint)missile_alive_count;
-        m_MissileCbufferDrawindirectArgs.SetData(m_MissileDrawindirectArgs);
+        m_MissileDrawindirectArgsCbuffer.SetData(m_MissileDrawindirectArgs);
         m_MissileMaterial.SetFloat(SHADER_PROPERTYID_CURRENTTIME, current_time);
         // set data for burner
         m_BurnerDrawindirectArgs[1] = (uint)missile_alive_count;
-        m_BurnerCbufferDrawindirectArgs.SetData(m_BurnerDrawindirectArgs);
+        m_BurnerDrawindirectArgsCbuffer.SetData(m_BurnerDrawindirectArgs);
         m_BurnerMaterial.SetFloat(SHADER_PROPERTYID_CURRENTTIME, current_time);
         // set data for trail
         m_TrailMaterial.SetFloat(SHADER_PROPERTYID_CURRENTTIME, current_time);
         m_TrailMaterial.SetInt(SHADER_PROPERTYID_DISPLAYNUM, missile_alive_count);
         m_TrailDrawindirectArgs[1] = (uint)missile_alive_count;
-        m_TrailCbufferDrawindirectArgs.SetData(m_TrailDrawindirectArgs);
+        m_TrailDrawindirectArgsCbuffer.SetData(m_TrailDrawindirectArgs);
         // set data for explosion
         m_ExplosionMaterial.SetFloat(SHADER_PROPERTYID_CURRENTTIME, current_time);
         m_ExplosionMaterial.SetVector(SHADER_PROPERTYID_CAMUP, m_Camera.transform.TransformVector(Vector3.up));
         m_ExplosionDrawindirectArgs[1] = (uint)missile_alive_count;
-        m_ExplosionCbufferDrawindirectArgs.SetData(m_ExplosionDrawindirectArgs);
+        m_ExplosionDrawindirectArgsCbuffer.SetData(m_ExplosionDrawindirectArgs);
 
         if (missile_alive_count > 0)
         {
             Graphics.DrawMeshInstancedIndirect(m_MissileMesh,
                                                0 /* submesh */,
                                                m_MissileMaterial,
-                                               m_UnlimitedBounds,
-                                               m_MissileCbufferDrawindirectArgs,
+                                               UNLIMITED_BOUNDS,
+                                               m_MissileDrawindirectArgsCbuffer,
                                                0 /* argsOffset */,
                                                null /* properties */,
                                                UnityEngine.Rendering.ShadowCastingMode.Off,
@@ -377,8 +406,8 @@ public class MissileManager : MonoBehaviour
             Graphics.DrawMeshInstancedIndirect(m_BurnerMesh,
                                                0 /* submesh */,
                                                m_BurnerMaterial,
-                                               m_UnlimitedBounds,
-                                               m_BurnerCbufferDrawindirectArgs,
+                                               UNLIMITED_BOUNDS,
+                                               m_BurnerDrawindirectArgsCbuffer,
                                                0 /* argsOffset */,
                                                null /* properties */,
                                                UnityEngine.Rendering.ShadowCastingMode.Off,
@@ -388,8 +417,8 @@ public class MissileManager : MonoBehaviour
             Graphics.DrawMeshInstancedIndirect(m_TrailMesh,
                                                0 /* submesh */,
                                                m_TrailMaterial,
-                                               m_UnlimitedBounds,
-                                               m_TrailCbufferDrawindirectArgs,
+                                               UNLIMITED_BOUNDS,
+                                               m_TrailDrawindirectArgsCbuffer,
                                                0 /* argsOffset */,
                                                null /* properties */,
                                                UnityEngine.Rendering.ShadowCastingMode.Off,
@@ -399,8 +428,8 @@ public class MissileManager : MonoBehaviour
             Graphics.DrawMeshInstancedIndirect(m_ExplosionMesh,
                                                0 /* submesh */,
                                                m_ExplosionMaterial,
-                                               m_UnlimitedBounds,
-                                               m_ExplosionCbufferDrawindirectArgs,
+                                               UNLIMITED_BOUNDS,
+                                               m_ExplosionDrawindirectArgsCbuffer,
                                                0 /* argsOffset */,
                                                null /* properties */,
                                                UnityEngine.Rendering.ShadowCastingMode.Off,
@@ -443,8 +472,6 @@ public class MissileManager : MonoBehaviour
     {
         ++m_FrameCount;
 
-        setup_target((float)update_time);
-
         for (var k = 0; k < MAX_RQUESTS; ++k)
         {
             if (m_Requests[k].done && !m_Requests[k].hasError)
@@ -478,7 +505,7 @@ public class MissileManager : MonoBehaviour
 
         // draw
         draw(m_Camera, (float)update_time, missile_alive_count);
-        m_DrawnUpdateTime_ = (float)update_time;
+        m_DrawnUpdateTime = (float)update_time;
         m_MissileDrawnAliveCount = missile_alive_count;
 
         // cleanup
@@ -491,10 +518,10 @@ public class MissileManager : MonoBehaviour
 
     public void OnSceneGUI(UnityEditor.SceneView sceneView)
     {
-        draw(sceneView.camera, m_DrawnUpdateTime_, m_MissileDrawnAliveCount);
+        draw(sceneView.camera, m_DrawnUpdateTime, m_MissileDrawnAliveCount);
     }
 
-    void set_spawn(ref SpawnData spawn, ref Vector3 pos, ref Quaternion rot, int missile_id, int target_id)
+    public void set_spawn(ref SpawnData spawn, ref Vector3 pos, ref Quaternion rot, int missile_id, int target_id)
     {
         Debug.Assert(target_id >= 0);
         spawn.Position = pos;
@@ -508,12 +535,6 @@ public class MissileManager : MonoBehaviour
 
     public void Spawn(Vector3 pos, Quaternion rot, int target_id, double update_time)
     {
-        if (((float)update_time - m_Targets[target_id].DeadTime) >= 0f)
-        {
-            Debug.Log("no target exists for spawn.");
-            return;                // no target exists.
-        }
-
         Debug.Assert(m_MissileStatuss.Length == MISSILE_MAX);
         int idx = -1;
         for (var i = 0; i < MISSILE_MAX; ++i)
@@ -541,52 +562,26 @@ public class MissileManager : MonoBehaviour
         m_NextSpawnMissileIdx = idx + 1;
     }
 
-    public int RegistMissile(double totaleUpdateTime)
+    /// <summary>
+    /// 添加一个目标
+    /// </summary>
+    /// <returns>
+    /// 肯定返回0, 即只会有1个目标
+    /// </returns>
+    public int SpawnTarget(Vector3 position, float radius)
     {
-        int id = -1;
-        for (int iMissile = 0; iMissile < m_Targets.Length; ++iMissile)
-        {
-            if (totaleUpdateTime - m_Targets[iMissile].SpawnTime < 0)
-            {
-                id = iMissile;
-                m_Targets[iMissile].Position = Vector3.zero;
-                m_Targets[iMissile].RadiusSqr = 0.4f * 0.4f;
-                m_Targets[iMissile].DeadTime = FLOAT_MAX;
-                m_Targets[iMissile].SpawnTime = (float)totaleUpdateTime;
-                break;
-            }
-        }
-        Debug.Assert(id >= 0);
-        return id;
+        m_Targets[0].Position = position;
+        m_Targets[0].RadiusSqr = radius * radius;
+        return 0;
     }
 
-    public void SetMissileRadius(int missileId, float radius)
-    {
-        m_Targets[missileId].RadiusSqr = radius * radius;
-    }
-
-    public void UpdateMissilePosition(int missileId, Vector3 pos)
-    {
-        m_Targets[missileId].Position = pos;
-    }
-
-    private void setup_target(float update_time)
-    {
-        for (var i = 0; i < m_Targets.Length; ++i)
-        {
-            if (update_time - m_Targets[i].SpawnTime > 0)
-            {
-                if ((update_time - m_Targets[i].DeadTime) > (MISSILE_ALIVE_PERIOD_AFTER_TARGET_DEATH +
-                                                                   TRAIL_REMAIN_PERIOD_AFTER_MISSILE_DEATH))
-                {
-                    // can be reused
-                    m_Targets[i].DeadTime = FLOAT_MAX;
-                    m_Targets[i].SpawnTime = FLOAT_MAX;
-                }
-            }
-        }
-    }
-
+    /// <summary>
+    /// 我猜测加<see cref="StructLayout"/>的原因
+    ///     shader中也定义了这个结构体, 且和这里的结构体变量顺序相同(命名可以不同)
+    ///     所以我推测, 在shader中访问这个数据是靠指针偏移
+    ///     这个属性应该是想让这里和shader中的结构体在内存和显存的数据偏移相同
+    ///         Sequential不让编译器优化结构体(例如:改变变量在内存中顺序, 内存对齐等)
+    /// </summary>
     [StructLayout(LayoutKind.Sequential)]
     public struct SpawnData
     {
@@ -599,17 +594,21 @@ public class MissileManager : MonoBehaviour
         public float RandomValueSecond;
     }
 
+    /// <summary>
+    /// 导弹的目标
+    /// </summary>
     [StructLayout(LayoutKind.Sequential)]
     public struct TargetData
     {
         public Vector3 Position;
         public float RadiusSqr;
-        public float DeadTime;
-        public float SpawnTime;
         public float Dummy0;
         public float Dummy1;
     }
 
+    /// <summary>
+    /// 很好理解，就是导弹本身
+    /// </summary>
     [StructLayout(LayoutKind.Sequential)]
     public struct MissileData
     {
@@ -624,6 +623,9 @@ public class MissileManager : MonoBehaviour
         public float Dummy1;
     }
 
+    /// <summary>
+    /// 这个是从shader中返回的计算结果
+    /// </summary>
     [StructLayout(LayoutKind.Sequential)]
     public struct ResultData
     {

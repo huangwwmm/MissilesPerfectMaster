@@ -13,7 +13,10 @@ public class SystemManager : MonoBehaviour
  
     private Camera m_MainCamera;
     private double m_TotalUpdateTime;
-    private int m_TargetId;
+    /// <summary>
+    /// 导弹攻击的目标
+    /// </summary>
+    private int m_TargetOfMissileIdx;
 
     protected void Awake()
     {
@@ -35,9 +38,7 @@ public class SystemManager : MonoBehaviour
         m_FinalMaterial.mainTexture = renderTexture;
 
         m_MissileManager.Initialize(m_MainCamera);
-        m_TargetId = m_MissileManager.RegistMissile(m_TotalUpdateTime);
-        m_MissileManager.SetMissileRadius(m_TargetId, 1f);
-        m_MissileManager.UpdateMissilePosition(m_TargetId, new Vector3(0f, 0f, 10f));
+        m_TargetOfMissileIdx = m_MissileManager.SpawnTarget(new Vector3(100.0f, 0.0f, 80.0f), 1.0f);
     }
 
     protected void OnDestroy()
@@ -49,8 +50,7 @@ public class SystemManager : MonoBehaviour
     {
         m_MissileManager.Spawn(new Vector3(0f, 0f, -40f)
                   , Quaternion.Euler(0f, -30f, 0f)
-                  , m_TargetId, m_TotalUpdateTime);
-        m_MissileManager.UpdateMissilePosition(m_TargetId, new Vector3(100f, 0f, 10f));
+                  , m_TargetOfMissileIdx, m_TotalUpdateTime);
         m_MissileManager.update(UPDATE_DELTA_TIME, m_TotalUpdateTime);
 
         m_TotalUpdateTime += UPDATE_DELTA_TIME;

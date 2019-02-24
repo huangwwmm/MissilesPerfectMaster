@@ -30,7 +30,6 @@ struct TargetData
     float dead_time_;
     float dummy0_;
     float dummy1_;
-    float dummy2_;
 };
 
 struct ResultData
