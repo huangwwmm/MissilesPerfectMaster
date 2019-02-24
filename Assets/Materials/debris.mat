@@ -27,4 +27,4 @@ Material:
     - <noninit>: 0
     m_Colors:
     - <noninit>: {r: 0, g: 1, b: 0, a: NaN}
-    - _TargetPosition: {r: -76.47993, g: -65.05651, b: 12.362743, a: 0}
+    - _TargetPosition: {r: -70.341705, g: -12.7, b: -26.435978, a: 0}

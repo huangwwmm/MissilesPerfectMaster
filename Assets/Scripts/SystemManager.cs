@@ -34,7 +34,6 @@ public class SystemManager : MonoBehaviour
     private Camera m_FinalCamera;
     private RenderTexture m_RenderTexture;
     private DrawBuffer m_DrawBuffer;
-    private SpectatorCamera m_SpectatorCamera;
     private double m_TotalUpdateTime;
 
     public static SystemManager GetInstance()
@@ -69,8 +68,6 @@ public class SystemManager : MonoBehaviour
         m_MainCamera = GameObject.Find("Main Camera").GetComponent<Camera>();
 
         MissileManager.Instance.Initialize(m_MainCamera);
-        InputManager.Instance.init();
-        Controller.Instance.init(false);
         TaskManager.GetInstance().Initialize();
         Fighter.createPool();
         Spark.Instance.init(m_SparkMaterial);
@@ -78,9 +75,6 @@ public class SystemManager : MonoBehaviour
 
         m_DrawBuffer = new DrawBuffer();
         m_DrawBuffer.init();
-
-        m_SpectatorCamera = new SpectatorCamera();
-        m_SpectatorCamera.Initialize();
 
         GameManager.GetInstance().Initialize(m_DebugMode);
 
@@ -105,15 +99,8 @@ public class SystemManager : MonoBehaviour
 
     protected void Update()
     {
-        InputManager.Instance.update();
-
-        // fetch
-        Controller.Instance.fetch(m_TotalUpdateTime);
-        var controller = Controller.Instance.getLatest();
-
         // update
         float dt = UPDATE_DELTA_TIME;
-        m_SpectatorCamera.AddRotationOffset(-controller.flick_y_, controller.flick_x_);
         GameManager.GetInstance().DoUpdate(dt, m_TotalUpdateTime);
         TaskManager.GetInstance().DoUpdate(dt, m_TotalUpdateTime);
         m_TotalUpdateTime += dt;
@@ -125,8 +112,7 @@ public class SystemManager : MonoBehaviour
 
         // renderUpdate
         m_DrawBuffer.beginRender();
-        TaskManager.GetInstance().DoRendererUpdate(m_SpectatorCamera,
-                                          m_DrawBuffer);
+        TaskManager.GetInstance().DoRendererUpdate(m_DrawBuffer);
         m_DrawBuffer.endRender();
 
         // end
@@ -141,8 +127,8 @@ public class SystemManager : MonoBehaviour
     private void DoRender(DrawBuffer draw_buffer)
     {
         // camera
-        m_MainCamera.transform.position = draw_buffer.camera_transform_.position_;
-        m_MainCamera.transform.rotation = draw_buffer.camera_transform_.rotation_;
+        //m_MainCamera.transform.position = draw_buffer.camera_transform_.position_;
+        //m_MainCamera.transform.rotation = draw_buffer.camera_transform_.rotation_;
         m_MainCamera.enabled = true;
         var vp = m_MainCamera.projectionMatrix * m_MainCamera.worldToCameraMatrix;
         Utility.GetPlanesFromFrustum(m_FrustumPlanes, ref vp);

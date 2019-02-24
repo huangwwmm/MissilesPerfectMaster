@@ -30,5 +30,5 @@
     /// <param name="totalUpdateTime">累计的Update时间（非真实时间），不包括当前帧</param>
     public abstract void DoUpdate(float deltaTime, double totalUpdateTime);
 
-    public abstract void DoRenderUpdate(SpectatorCamera camera, DrawBuffer drawBuffer);
+    public abstract void DoRenderUpdate(DrawBuffer drawBuffer);
 }

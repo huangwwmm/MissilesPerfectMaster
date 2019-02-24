@@ -128,7 +128,7 @@ public partial class Fighter : Task
         }
     }
 
-    public override void DoRenderUpdate(SpectatorCamera camera, DrawBuffer draw_buffer)
+    public override void DoRenderUpdate(DrawBuffer draw_buffer)
     {
         on_render_update_(draw_buffer);
     }
