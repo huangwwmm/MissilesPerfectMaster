@@ -108,6 +108,7 @@ public class MissileManager : MonoBehaviour
             m_TrailMesh.vertices = vertices;
             m_TrailMesh.triangles = triangles;
         }
+
         // mesh explosion
         {
             var vertices = new Vector3[4];
