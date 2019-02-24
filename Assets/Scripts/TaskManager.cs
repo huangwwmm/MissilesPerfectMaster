@@ -23,7 +23,6 @@ public class TaskManager
     /// <see cref="m_WillAdds"/>
     /// </summary>
     private List<Task> m_WillRemoves;
-    private int m_Count;
 
     public static TaskManager GetInstance()
     {
@@ -34,14 +33,8 @@ public class TaskManager
     {
         m_First = null;
         m_Last = null;
-        m_Count = 0;
         m_WillAdds = new List<Task>(DEFAULT_CAPACITY);
         m_WillRemoves = new List<Task>(DEFAULT_CAPACITY);
-    }
-
-    public int GetCount()
-    {
-        return m_Count;
     }
 
     public void Add(Task task)
@@ -110,8 +103,10 @@ public class TaskManager
 
     public void DoRendererUpdate(DrawBuffer drawBuffer)
     {
+        int x = 0;
         for (Task iterTask = m_First; iterTask != null; iterTask = iterTask._NextTask)
         {
+            x++;
             iterTask.DoRenderUpdate(drawBuffer);
         }
     }

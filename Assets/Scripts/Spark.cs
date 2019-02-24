@@ -39,7 +39,7 @@ public class Spark
     public Material getMaterial() { return material_; }
     public MaterialPropertyBlock getMaterialPropertyBlock() { return material_property_block_; }
 
-    public void init(Material material)
+    public void Initialize(Material material)
     {
         positions_ = new Vector3[SPARK_MAX];
         uv2_list_ = new Vector2[SPARK_MAX];

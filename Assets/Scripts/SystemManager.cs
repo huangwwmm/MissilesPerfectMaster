@@ -31,7 +31,6 @@ public class SystemManager : MonoBehaviour
     private Vector4[] m_FrustumPlanes;
     private Camera m_MainCamera;
     private GameObject m_CameraFinalHolder;
-    private Camera m_FinalCamera;
     private RenderTexture m_RenderTexture;
     private DrawBuffer m_DrawBuffer;
     private double m_TotalUpdateTime;
@@ -41,25 +40,18 @@ public class SystemManager : MonoBehaviour
         return ms_Instance;
     }
 
-    protected void OnEnable()
-    {
-#if UNITY_EDITOR
-        UnityEditor.SceneView.onSceneGUIDelegate -= OnSceneGUI;
-        UnityEditor.SceneView.onSceneGUIDelegate += OnSceneGUI;
-#endif
-    }
-
     protected void Awake()
     {
         ms_Instance = gameObject.GetComponent<SystemManager>();
 
-        MyRandom.SetSeed(12345L);
-        m_FinalCamera = GameObject.Find("FinalCamera").GetComponent<Camera>();
-        m_FinalCamera.enabled = false;
-        if ((float)Screen.width / Screen.height < ASPECT_RATIO)
+        // 这个Camera是用来渲染它子节点的Quad, Quad的材质上MainTexture是Main Camera渲染出来的
         {
-            m_FinalCamera.orthographicSize = m_FinalCamera.orthographicSize
-                * (ASPECT_RATIO * ((float)Screen.height / Screen.width)); ;
+            Camera finalCamera = GameObject.Find("Final Camera").GetComponent<Camera>();
+            if ((float)Screen.width / Screen.height < ASPECT_RATIO)
+            {
+                finalCamera.orthographicSize = finalCamera.orthographicSize
+                    * (ASPECT_RATIO * ((float)Screen.height / Screen.width)); ;
+            }
         }
         Application.targetFrameRate = UPDATE_FPS;
 
@@ -67,11 +59,12 @@ public class SystemManager : MonoBehaviour
 
         m_MainCamera = GameObject.Find("Main Camera").GetComponent<Camera>();
 
+        MyRandom.SetSeed(12345L);
         MissileManager.Instance.Initialize(m_MainCamera);
         TaskManager.GetInstance().Initialize();
-        Fighter.createPool();
-        Spark.Instance.init(m_SparkMaterial);
-        Debris.Instance.init(m_DebrisMaterial);
+        Fighter.CreatePool();
+        Spark.Instance.Initialize(m_SparkMaterial);
+        Debris.Instance.Initialize(m_DebrisMaterial);
 
         m_DrawBuffer = new DrawBuffer();
         m_DrawBuffer.init();
@@ -84,8 +77,14 @@ public class SystemManager : MonoBehaviour
         m_FinalMaterial.mainTexture = m_RenderTexture;
         m_AlphaMatrices = new Matrix4x4[ALPHA_MAX];
         m_FrustumPlanes = new Vector4[6];
+    }
 
-        m_FinalCamera.enabled = true;
+    protected void OnEnable()
+    {
+#if UNITY_EDITOR
+        UnityEditor.SceneView.onSceneGUIDelegate -= OnSceneGUI;
+        UnityEditor.SceneView.onSceneGUIDelegate += OnSceneGUI;
+#endif
     }
 
     protected void OnDisable()
@@ -124,19 +123,15 @@ public class SystemManager : MonoBehaviour
         Debris.Instance.render(m_MainCamera, render_time);
     }
 
-    private void DoRender(DrawBuffer draw_buffer)
+    private void DoRender(DrawBuffer drawBuffer)
     {
-        // camera
-        //m_MainCamera.transform.position = draw_buffer.camera_transform_.position_;
-        //m_MainCamera.transform.rotation = draw_buffer.camera_transform_.rotation_;
-        m_MainCamera.enabled = true;
-        var vp = m_MainCamera.projectionMatrix * m_MainCamera.worldToCameraMatrix;
-        Utility.GetPlanesFromFrustum(m_FrustumPlanes, ref vp);
+        Utility.GetPlanesFromFrustum(ref m_FrustumPlanes
+            , m_MainCamera.projectionMatrix * m_MainCamera.worldToCameraMatrix);
 
         int alpha_count = 0;
-        for (var i = 0; i < draw_buffer.object_num_; ++i)
+        for (var i = 0; i < drawBuffer.object_num_; ++i)
         {
-            switch (draw_buffer.object_buffer_[i].type_)
+            switch (drawBuffer.object_buffer_[i].type_)
             {
                 case DrawBuffer.Type.None:
                     Debug.Assert(false);
@@ -145,10 +140,10 @@ public class SystemManager : MonoBehaviour
                     break;
                 case DrawBuffer.Type.FighterAlpha:
                     if (Utility.InFrustum(m_FrustumPlanes,
-                                          ref draw_buffer.object_buffer_[i].transform_.position_,
+                                          ref drawBuffer.object_buffer_[i].transform_.position_,
                                           2f /* radius */))
                     {
-                        draw_buffer.object_buffer_[i].transform_.getLocalToWorldMatrix(ref m_AlphaMatrices[alpha_count]);
+                        drawBuffer.object_buffer_[i].transform_.getLocalToWorldMatrix(ref m_AlphaMatrices[alpha_count]);
                         ++alpha_count;
                     }
                     break;

@@ -20,7 +20,7 @@ public class Debris
     public Mesh getMesh() { return mesh_; }
     public Material getMaterial() { return material_; }
 
-    public void init(Material material)
+    public void Initialize(Material material)
     {
         range_ = 16f;
         rangeR_ = 1f / range_;

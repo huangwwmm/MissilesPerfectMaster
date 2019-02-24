@@ -9,7 +9,7 @@ public partial class Fighter : Task
     private static int pool_index_;
     private static int[] target_table_;
 
-    public static void createPool()
+    public static void CreatePool()
     {
         pool_ = new Fighter[POOL_MAX];
         for (var i = 0; i < POOL_MAX; ++i)

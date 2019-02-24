@@ -445,9 +445,8 @@ public class MissileManager : MonoBehaviour
         cshader_update_.SetVector(shader_CamPos, camera_transform_.position);
         cshader_update_.SetInt(shader_FrameCount, frame_count_);
         {
-            var proj = camera_.projectionMatrix;
-            var matrix_vp = proj * view;
-            Utility.GetPlanesFromFrustum(frustum_planes_, ref matrix_vp);
+            Utility.GetPlanesFromFrustum(ref frustum_planes_
+                , camera_.projectionMatrix * view);
             cbuffer_frustum_planes_.SetData(frustum_planes_);
         }
         if (spawn_index_ > 0)

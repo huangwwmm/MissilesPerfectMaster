@@ -55,7 +55,7 @@ public static class Utility
         vec.w *= rlen;
     }
 
-    public static void GetPlanesFromFrustum(Vector4[] planes, ref Matrix4x4 vp)
+    public static void GetPlanesFromFrustum(ref Vector4[] planes, Matrix4x4 vp)
     {
         Debug.Assert(planes.Length >= 6);
         int idx = 0;
