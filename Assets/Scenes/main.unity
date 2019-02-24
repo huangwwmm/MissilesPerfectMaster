@@ -301,16 +301,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f10b669bbd0b246ffa17f3d832f30650, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  mesh_missile_: {fileID: 4300000, guid: 87bc15a50221647f4bff4d7932049f41, type: 3}
-  material_missile_: {fileID: 2100000, guid: bedb7ecd0b9054c74bbeb0a625109350, type: 2}
-  mesh_burner_: {fileID: 4300000, guid: b4fa4b3862085406e864a8d4b4b86dc7, type: 3}
-  material_burner_: {fileID: 2100000, guid: d93845dcf15c94fb28f21e91be03789e, type: 2}
-  material_trail_: {fileID: 2100000, guid: 8392d91e835ac4eaf9d5eb6e1d6bd0e9, type: 2}
-  material_explosion_: {fileID: 2100000, guid: 1b38d881fe44f4b2ebec5d74120e6909, type: 2}
-  cshader_spawn_: {fileID: 7200000, guid: 2adef938878a147fd9ec592f3dc38726, type: 3}
-  cshader_update_: {fileID: 7200000, guid: d1f47106db96b43368ab4f4757704149, type: 3}
-  cshader_sort_: {fileID: 7200000, guid: 007dfd316e3e547cd939b92d670e999c, type: 3}
-  exist_missile_count_: 0
+  m_MissileMesh: {fileID: 4300000, guid: 87bc15a50221647f4bff4d7932049f41, type: 3}
+  m_BurnerMesh: {fileID: 4300000, guid: b4fa4b3862085406e864a8d4b4b86dc7, type: 3}
+  m_MissileMaterial: {fileID: 2100000, guid: bedb7ecd0b9054c74bbeb0a625109350, type: 2}
+  m_BurnerMaterial: {fileID: 2100000, guid: d93845dcf15c94fb28f21e91be03789e, type: 2}
+  m_TrailMaterial: {fileID: 2100000, guid: 8392d91e835ac4eaf9d5eb6e1d6bd0e9, type: 2}
+  m_ExplosionMaterial: {fileID: 2100000, guid: 1b38d881fe44f4b2ebec5d74120e6909, type: 2}
+  m_SpawnCshader: {fileID: 7200000, guid: 2adef938878a147fd9ec592f3dc38726, type: 3}
+  m_UpdateCshader: {fileID: 7200000, guid: d1f47106db96b43368ab4f4757704149, type: 3}
+  m_SortCshader: {fileID: 7200000, guid: 007dfd316e3e547cd939b92d670e999c, type: 3}
 --- !u!4 &1031810515
 Transform:
   m_ObjectHideFlags: 0

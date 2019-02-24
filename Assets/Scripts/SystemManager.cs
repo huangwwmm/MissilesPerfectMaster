@@ -13,7 +13,7 @@ public class SystemManager : MonoBehaviour
  
     private Camera m_MainCamera;
     private double m_TotalUpdateTime;
-    private int m_MissileId;
+    private int m_TargetId;
 
     protected void Awake()
     {
@@ -35,9 +35,9 @@ public class SystemManager : MonoBehaviour
         m_FinalMaterial.mainTexture = renderTexture;
 
         m_MissileManager.Initialize(m_MainCamera);
-        m_MissileId = m_MissileManager.RegistMissile(m_TotalUpdateTime);
-        m_MissileManager.SetMissileRadius(m_MissileId, 1f);
-        m_MissileManager.UpdateMissilePosition(m_MissileId, new Vector3(0f, 0f, 10f));
+        m_TargetId = m_MissileManager.RegistMissile(m_TotalUpdateTime);
+        m_MissileManager.SetMissileRadius(m_TargetId, 1f);
+        m_MissileManager.UpdateMissilePosition(m_TargetId, new Vector3(0f, 0f, 10f));
     }
 
     protected void OnDestroy()
@@ -49,9 +49,8 @@ public class SystemManager : MonoBehaviour
     {
         m_MissileManager.Spawn(new Vector3(0f, 0f, -40f)
                   , Quaternion.Euler(0f, -30f, 0f)
-                  , m_MissileId, m_TotalUpdateTime);
-        m_MissileManager.UpdateMissilePosition(m_MissileId, new Vector3(100f, 0f, 10f));
-        m_MissileManager.checkHitAndClear(m_MissileId);
+                  , m_TargetId, m_TotalUpdateTime);
+        m_MissileManager.UpdateMissilePosition(m_TargetId, new Vector3(100f, 0f, 10f));
         m_MissileManager.update(UPDATE_DELTA_TIME, m_TotalUpdateTime);
 
         m_TotalUpdateTime += UPDATE_DELTA_TIME;
